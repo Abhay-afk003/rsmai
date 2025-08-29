@@ -40,7 +40,8 @@ export type MarketResearchAnalysisOutput = z.infer<typeof MarketResearchAnalysis
 
 // Schemas for scrape-website.ts
 export const ScrapeWebsiteInputSchema = z.object({
-  url: z.string().url().describe('The URL of the website to scrape.'),
+  source: z.enum(["website", "reddit", "news", "social"]).describe("The data source to scrape from."),
+  query: z.string().describe("The search query, subreddit, or URL to scrape."),
 });
 export type ScrapeWebsiteInput = z.infer<typeof ScrapeWebsiteInputSchema>;
 

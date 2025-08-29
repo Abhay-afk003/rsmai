@@ -3,7 +3,7 @@
 import { analyzeClientPainPoints } from "@/ai/flows/analyze-client-pain-points";
 import { marketResearchAnalysis } from "@/ai/flows/market-research-analysis";
 import { scrapeWebsite } from "@/ai/flows/scrape-website";
-import type { AnalyzeClientPainPointsOutput, MarketResearchAnalysisOutput, ScrapeWebsiteOutput } from "@/ai/schemas";
+import type { AnalyzeClientPainPointsOutput, MarketResearchAnalysisOutput, ScrapeWebsiteOutput, ScrapeWebsiteInput } from "@/ai/schemas";
 
 type AnalysisResult = {
   success: boolean;
@@ -54,20 +54,22 @@ type ScrapeResult = {
     error?: string;
 };
 
-export async function performScrape(url: string): Promise<ScrapeResult> {
-    if (!url) {
-        return { success: false, error: "URL cannot be empty." };
+export async function performScrape(input: ScrapeWebsiteInput): Promise<ScrapeResult> {
+    if (!input.query) {
+        return { success: false, error: "Query cannot be empty." };
     }
     
-    // Basic URL validation
-    try {
-        new URL(url);
-    } catch (_) {
-        return { success: false, error: "Invalid URL provided." };
+    if (input.source === 'website') {
+        try {
+            new URL(input.query);
+        } catch (_) {
+            return { success: false, error: "Invalid URL provided for website scraping." };
+        }
     }
 
+
     try {
-        const result = await scrapeWebsite({ url });
+        const result = await scrapeWebsite(input);
         return { success: true, data: result };
     } catch (error) {
         console.error("Website scraping failed:", error);

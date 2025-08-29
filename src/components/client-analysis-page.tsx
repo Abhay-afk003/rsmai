@@ -7,20 +7,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Link as LinkIcon, Globe, MessageSquare } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Link as LinkIcon, Globe, MessageSquare, Newspaper, Users } from "lucide-react";
 import { performAnalysis, performMarketResearch, performScrape } from "@/app/actions";
-import type { AnalyzeClientPainPointsOutput } from "@/ai/schemas";
+import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type ScrapeSource = "website" | "reddit";
+type ScrapeSource = "website" | "reddit" | "news" | "social";
 
 type AnalysisResult = {
   id: string;
   date: string;
   scrapedUrl?: string;
+  scrapeQuery?: string;
+  scrapeSource?: ScrapeSource;
   clientData: string;
   socialsMissing: string[];
   painPoints: AnalyzeClientPainPointsOutput["painPoints"];
@@ -45,10 +47,16 @@ function getMissingSocials(text: string): string[] {
   return missing;
 }
 
+const sourceConfig = {
+    website: { label: "Website URL", placeholder: "https://example.com", icon: Globe },
+    reddit: { label: "Subreddit", placeholder: "e.g., programming", icon: MessageSquare },
+    news: { label: "News Articles Query", placeholder: "e.g., AI in healthcare", icon: Newspaper },
+    social: { label: "Social Media Query", placeholder: "e.g., #customerfeedback", icon: Users },
+}
+
 export default function ClientAnalysisPage() {
   const [scrapedData, setScrapedData] = useState("");
-  const [urlToScrape, setUrlToScrape] = useState("");
-  const [subreddit, setSubreddit] = useState("");
+  const [scrapeQuery, setScrapeQuery] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [history, setHistory] = useState<AnalysisResult[]>([]);
   const [isScraping, startScrapingTransition] = useTransition();
@@ -78,31 +86,18 @@ export default function ClientAnalysisPage() {
   }, [history]);
 
   const handleScrapeAndAnalyze = () => {
-    let url = "";
-    if (scrapeSource === 'website') {
-      if (!urlToScrape.trim()) {
-        toast({ title: "URL required", description: "Please enter a URL to scrape.", variant: "destructive" });
-        return;
-      }
-      url = urlToScrape;
-    } else { // reddit
-       if (!subreddit.trim()) {
-        toast({ title: "Subreddit required", description: "Please enter a subreddit to scrape.", variant: "destructive" });
-        return;
-      }
-      // Construct a URL for scraping. This is a simple approach.
-      // A more robust solution would use the Reddit API.
-      url = `https://www.reddit.com/r/${subreddit}/hot.json`;
+    if (!scrapeQuery.trim()) {
+      toast({ title: "Input required", description: `Please enter a ${sourceConfig[scrapeSource].label}.`, variant: "destructive" });
+      return;
     }
-    
+
     let scrapedContent = "";
+    const scrapeInput: ScrapeWebsiteInput = { source: scrapeSource, query: scrapeQuery };
 
     startScrapingTransition(async () => {
-      // For now, we'll treat both sources as a simple URL fetch.
-      const scrapeResult = await performScrape(url);
+      const scrapeResult = await performScrape(scrapeInput);
       if (scrapeResult.success && scrapeResult.data) {
-        // A simple JSON.stringify for reddit data for now.
-        scrapedContent = scrapeSource === 'reddit' ? JSON.stringify(scrapeResult.data) : scrapeResult.data.content;
+        scrapedContent = scrapeResult.data.content;
         
         setScrapedData(scrapedContent);
         toast({
@@ -110,14 +105,15 @@ export default function ClientAnalysisPage() {
           description: "Content has been extracted.",
         });
 
-        // Now, perform the analysis
         startAnalyzingTransition(async () => {
           const analysisResult = await performAnalysis(scrapedContent);
           if (analysisResult.success && analysisResult.data) {
             const newResult: AnalysisResult = {
               id: new Date().toISOString(),
               date: new Date().toLocaleDateString(),
-              scrapedUrl: url,
+              scrapedUrl: scrapeSource === 'website' ? scrapeQuery : undefined,
+              scrapeQuery: scrapeSource !== 'website' ? scrapeQuery : undefined,
+              scrapeSource: scrapeSource,
               clientData: scrapedContent,
               socialsMissing: getMissingSocials(scrapedContent),
               painPoints: analysisResult.data.painPoints,
@@ -125,8 +121,7 @@ export default function ClientAnalysisPage() {
             };
             setHistory(prev => [newResult, ...prev]);
             setScrapedData("");
-            setUrlToScrape("");
-            setSubreddit("");
+            setScrapeQuery("");
             toast({
               title: "Analysis Complete",
               description: "Pain points have been identified and added to history.",
@@ -218,17 +213,18 @@ export default function ClientAnalysisPage() {
       });
       return;
     }
-    const header = "Count,Date,Scraped URL,Client Details,Socials Missing,Pain Points,Market Research,Feedback\n";
+    const header = "Count,Date,Source,Query/URL,Client Details,Socials Missing,Pain Points,Market Research,Feedback\n";
     const rows = history.map((row, index) => {
       const count = history.length - index;
       const date = row.date;
-      const scrapedUrl = `"${row.scrapedUrl || ''}"`;
+      const source = row.scrapeSource || 'manual';
+      const queryOrUrl = `"${row.scrapedUrl || row.scrapeQuery || ''}"`;
       const clientDetails = `"${row.clientData.replace(/"/g, '""')}"`;
       const socialsMissing = row.socialsMissing.join(", ");
       const painPoints = `"${row.painPoints.map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
       const marketResearch = `"${(row.marketResearch || "").replace(/"/g, '""')}"`;
       const feedback = `"${row.feedback.replace(/"/g, '""')}"`;
-      return [count, date, scrapedUrl, clientDetails, socialsMissing, painPoints, marketResearch, feedback].join(",");
+      return [count, date, source, queryOrUrl, clientDetails, socialsMissing, painPoints, marketResearch, feedback].join(",");
     }).reverse().join("\n");
 
     const csvContent = header + rows;
@@ -241,6 +237,8 @@ export default function ClientAnalysisPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  const currentSourceConfig = sourceConfig[scrapeSource];
 
   return (
     <TooltipProvider>
@@ -255,13 +253,13 @@ export default function ClientAnalysisPage() {
               <CardHeader>
                 <CardTitle>Client Data Analysis</CardTitle>
                 <CardDescription>
-                  Scrape a website or subreddit, or paste client data to analyze pain points.
+                  Scrape data from various sources, or paste it manually to analyze pain points.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] gap-2 items-end">
                     <div>
-                        <label htmlFor="scrape-source" className="text-sm font-medium">Scrape Source</label>
+                        <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
                         <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
                             <SelectTrigger id="scrape-source">
                                 <SelectValue placeholder="Select source" />
@@ -269,36 +267,23 @@ export default function ClientAnalysisPage() {
                             <SelectContent>
                                 <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Website</div></SelectItem>
                                 <SelectItem value="reddit"><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Reddit</div></SelectItem>
+                                <SelectItem value="news"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" /> News Articles</div></SelectItem>
+                                <SelectItem value="social"><div className="flex items-center gap-2"><Users className="h-4 w-4" /> Social Media</div></SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
-                    {scrapeSource === 'website' && (
-                        <div>
-                             <label htmlFor="url-input" className="text-sm font-medium">Website URL</label>
-                             <Input 
-                                id="url-input"
-                                placeholder="https://example.com"
-                                value={urlToScrape}
-                                onChange={(e) => setUrlToScrape(e.target.value)}
-                                disabled={isPending}
-                            />
-                        </div>
-                    )}
+                    <div>
+                         <label htmlFor="query-input" className="text-sm font-medium">{currentSourceConfig.label}</label>
+                         <Input 
+                            id="query-input"
+                            placeholder={currentSourceConfig.placeholder}
+                            value={scrapeQuery}
+                            onChange={(e) => setScrapeQuery(e.target.value)}
+                            disabled={isPending}
+                        />
+                    </div>
                     
-                    {scrapeSource === 'reddit' && (
-                         <div>
-                            <label htmlFor="subreddit-input" className="text-sm font-medium">Subreddit</label>
-                            <Input 
-                                id="subreddit-input"
-                                placeholder="e.g., programming"
-                                value={subreddit}
-                                onChange={(e) => setSubreddit(e.target.value)}
-                                disabled={isPending}
-                            />
-                        </div>
-                    )}
-
                     <Button onClick={handleScrapeAndAnalyze} disabled={isPending}>
                       {isScraping ? (
                         <>
@@ -390,12 +375,19 @@ export default function ClientAnalysisPage() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <div className="truncate flex items-center gap-2 cursor-pointer hover:underline">
-                                            {row.scrapedUrl && <LinkIcon className="h-4 w-4 shrink-0" />}
-                                            <span className="truncate">{row.scrapedUrl || row.clientData}</span>
+                                            {row.scrapeSource && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span>{React.createElement(sourceConfig[row.scrapeSource].icon, { className: "h-4 w-4 shrink-0" })}</span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>{row.scrapeSource}</TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                            <span className="truncate">{row.scrapedUrl || row.scrapeQuery || row.clientData}</span>
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-md bg-card border-border p-4">
-                                        {row.scrapedUrl && <p className="font-bold mb-2 break-all">{row.scrapedUrl}</p>}
+                                        {row.scrapeSource && <p className="font-bold mb-2 break-all">{row.scrapeQuery || row.scrapedUrl}</p>}
                                         <p className="text-card-foreground whitespace-pre-wrap break-words">{row.clientData}</p>
                                     </TooltipContent>
                                 </Tooltip>
@@ -464,5 +456,3 @@ export default function ClientAnalysisPage() {
     </TooltipProvider>
   );
 }
-
-    
