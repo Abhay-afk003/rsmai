@@ -3,29 +3,10 @@
  * @fileOverview Analyzes scraped client data to identify and categorize pain points using AI.
  *
  * - analyzeClientPainPoints - A function that handles the analysis of client pain points.
- * - AnalyzeClientPainPointsInput - The input type for the analyzeClientPainPoints function.
- * - AnalyzeClientPainPointsOutput - The return type for the analyzeClientPainPoints function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const AnalyzeClientPainPointsInputSchema = z.object({
-  clientData: z
-    .string()
-    .describe('The scraped client data to analyze.'),
-});
-export type AnalyzeClientPainPointsInput = z.infer<typeof AnalyzeClientPainPointsInputSchema>;
-
-const AnalyzeClientPainPointsOutputSchema = z.object({
-  painPoints: z.array(
-    z.object({
-      category: z.string().describe('The category of the pain point.'),
-      description: z.string().describe('A detailed description of the pain point.'),
-    })
-  ).describe('The identified pain points categorized by category and description.'),
-});
-export type AnalyzeClientPainPointsOutput = z.infer<typeof AnalyzeClientPainPointsOutputSchema>;
+import { AnalyzeClientPainPointsInput, AnalyzeClientPainPointsInputSchema, AnalyzeClientPainPointsOutput, AnalyzeClientPainPointsOutputSchema } from '@/ai/schemas';
 
 export async function analyzeClientPainPoints(input: AnalyzeClientPainPointsInput): Promise<AnalyzeClientPainPointsOutput> {
   return analyzeClientPainPointsFlow(input);

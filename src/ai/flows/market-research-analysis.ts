@@ -3,26 +3,11 @@
  * @fileOverview Performs market research analysis on client data.
  *
  * - marketResearchAnalysis - A function that handles the market research analysis.
- * - MarketResearchAnalysisInput - The input type for the marketResearchAnalysis function.
- * - MarketResearchAnalysisOutput - The return type for the marketResearchAnalysis function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { MarketResearchAnalysisInput, MarketResearchAnalysisInputSchema, MarketResearchAnalysisOutput, MarketResearchAnalysisOutputSchema } from '@/ai/schemas';
 
-const MarketResearchAnalysisInputSchema = z.object({
-  clientData: z
-    .string()
-    .describe('The client data to perform market research on.'),
-});
-export type MarketResearchAnalysisInput = z.infer<typeof MarketResearchAnalysisInputSchema>;
-
-const MarketResearchAnalysisOutputSchema = z.object({
-  researchSummary: z
-    .string()
-    .describe('A summary of the market research findings.'),
-});
-export type MarketResearchAnalysisOutput = z.infer<typeof MarketResearchAnalysisOutputSchema>;
 
 export async function marketResearchAnalysis(input: MarketResearchAnalysisInput): Promise<MarketResearchAnalysisOutput> {
   return marketResearchAnalysisFlow(input);

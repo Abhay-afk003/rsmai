@@ -7,14 +7,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search } from "lucide-react";
-import { performAnalysis, performMarketResearch } from "@/app/actions";
-import type { AnalyzeClientPainPointsOutput } from "@/ai/flows/analyze-client-pain-points";
+import { Loader2, Download, BrainCircuit, Search, Link as LinkIcon } from "lucide-react";
+import { performAnalysis, performMarketResearch, performScrape } from "@/app/actions";
+import type { AnalyzeClientPainPointsOutput } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 
 type AnalysisResult = {
   id: string;
   date: string;
+  scrapedUrl?: string;
   clientData: string;
   socialsMissing: string[];
   painPoints: AnalyzeClientPainPointsOutput["painPoints"];
@@ -41,8 +44,12 @@ function getMissingSocials(text: string): string[] {
 
 export default function ClientAnalysisPage() {
   const [scrapedData, setScrapedData] = useState("");
+  const [urlToScrape, setUrlToScrape] = useState("");
   const [history, setHistory] = useState<AnalysisResult[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const [isScraping, startScrapingTransition] = useTransition();
+  const [isAnalyzing, startAnalyzingTransition] = useTransition();
+  const isPending = isScraping || isAnalyzing;
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,7 +72,67 @@ export default function ClientAnalysisPage() {
     }
   }, [history]);
 
-  const handleAnalysis = () => {
+  const handleScrapeAndAnalyze = () => {
+    if (!urlToScrape.trim()) {
+      toast({
+        title: "URL required",
+        description: "Please enter a URL to scrape.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let scrapedContent = "";
+
+    startScrapingTransition(async () => {
+      const scrapeResult = await performScrape(urlToScrape);
+      if (scrapeResult.success && scrapeResult.data) {
+        scrapedContent = scrapeResult.data.content;
+        setScrapedData(scrapedContent);
+        toast({
+          title: "Scraping Complete",
+          description: "Website content has been extracted.",
+        });
+
+        // Now, perform the analysis
+        startAnalyzingTransition(async () => {
+          const analysisResult = await performAnalysis(scrapedContent);
+          if (analysisResult.success && analysisResult.data) {
+            const newResult: AnalysisResult = {
+              id: new Date().toISOString(),
+              date: new Date().toLocaleDateString(),
+              scrapedUrl: urlToScrape,
+              clientData: scrapedContent,
+              socialsMissing: getMissingSocials(scrapedContent),
+              painPoints: analysisResult.data.painPoints,
+              feedback: "N/A",
+            };
+            setHistory(prev => [newResult, ...prev]);
+            setScrapedData("");
+            setUrlToScrape("");
+            toast({
+              title: "Analysis Complete",
+              description: "Pain points have been identified and added to history.",
+            });
+          } else {
+            toast({
+              title: "Analysis Failed",
+              description: analysisResult.error || "An unknown error occurred.",
+              variant: "destructive",
+            });
+          }
+        });
+      } else {
+        toast({
+          title: "Scraping Failed",
+          description: scrapeResult.error || "An unknown error occurred.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const handleManualAnalysis = () => {
     if (!scrapedData.trim()) {
       toast({
         title: "Input required",
@@ -75,7 +142,7 @@ export default function ClientAnalysisPage() {
       return;
     }
 
-    startTransition(async () => {
+    startAnalyzingTransition(async () => {
       const result = await performAnalysis(scrapedData);
       if (result.success && result.data) {
         const newResult: AnalysisResult = {
@@ -102,10 +169,11 @@ export default function ClientAnalysisPage() {
     });
   };
 
+
   const handleMarketResearch = (id: string, clientData: string) => {
     setHistory(prev => prev.map(item => item.id === id ? { ...item, isResearching: true } : item));
 
-    startTransition(async () => {
+    startAnalyzingTransition(async () => {
         const result = await performMarketResearch(clientData);
         if (result.success && result.data) {
             setHistory(prev => prev.map(item => item.id === id ? { ...item, marketResearch: result.data!.researchSummary, isResearching: false } : item));
@@ -133,16 +201,17 @@ export default function ClientAnalysisPage() {
       });
       return;
     }
-    const header = "Count,Date,Client Details,Socials Missing,Pain Points,Market Research,Feedback\n";
+    const header = "Count,Date,Scraped URL,Client Details,Socials Missing,Pain Points,Market Research,Feedback\n";
     const rows = history.map((row, index) => {
       const count = history.length - index;
       const date = row.date;
+      const scrapedUrl = `"${row.scrapedUrl || ''}"`;
       const clientDetails = `"${row.clientData.replace(/"/g, '""')}"`;
       const socialsMissing = row.socialsMissing.join(", ");
       const painPoints = `"${row.painPoints.map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
       const marketResearch = `"${(row.marketResearch || "").replace(/"/g, '""')}"`;
       const feedback = `"${row.feedback.replace(/"/g, '""')}"`;
-      return [count, date, clientDetails, socialsMissing, painPoints, marketResearch, feedback].join(",");
+      return [count, date, scrapedUrl, clientDetails, socialsMissing, painPoints, marketResearch, feedback].join(",");
     }).reverse().join("\n");
 
     const csvContent = header + rows;
@@ -169,10 +238,43 @@ export default function ClientAnalysisPage() {
               <CardHeader>
                 <CardTitle>Client Data Analysis</CardTitle>
                 <CardDescription>
-                  Paste scraped client data (e.g., from forums, social media) below to analyze their pain points.
+                  Scrape a website or paste client data (e.g., from forums, social media) to analyze pain points.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="grid gap-6">
+                <div className="grid gap-2">
+                    <label htmlFor="url-input" className="text-sm font-medium">Scrape from URL</label>
+                    <div className="flex gap-2">
+                        <Input 
+                            id="url-input"
+                            placeholder="https://example.com"
+                            value={urlToScrape}
+                            onChange={(e) => setUrlToScrape(e.target.value)}
+                            disabled={isPending}
+                        />
+                         <Button onClick={handleScrapeAndAnalyze} disabled={isPending || !urlToScrape.trim()}>
+                          {isScraping ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Scraping...
+                            </>
+                          ) : isAnalyzing ? (
+                             <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Analyzing...
+                            </>
+                          )
+                          : (
+                            "Scrape & Analyze"
+                          )}
+                        </Button>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <Separator className="flex-1" />
+                    <span className="text-xs text-muted-foreground">OR</span>
+                    <Separator className="flex-1" />
+                </div>
                 <Textarea
                   placeholder="Paste client data here..."
                   className="min-h-[150px] text-sm"
@@ -182,14 +284,14 @@ export default function ClientAnalysisPage() {
                 />
               </CardContent>
               <CardFooter>
-                <Button onClick={handleAnalysis} disabled={isPending || !scrapedData.trim()}>
-                  {isPending ? (
+                <Button onClick={handleManualAnalysis} disabled={isPending || !scrapedData.trim()}>
+                  {isAnalyzing && !isScraping ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Analyzing...
                     </>
                   ) : (
-                    "Analyze Pain Points"
+                    "Analyze Pasted Text"
                   )}
                 </Button>
               </CardFooter>
@@ -215,7 +317,7 @@ export default function ClientAnalysisPage() {
                       <TableRow>
                         <TableHead className="w-[50px]">#</TableHead>
                         <TableHead className="w-[100px]">Date</TableHead>
-                        <TableHead>Client Details</TableHead>
+                        <TableHead>Client Details / Source</TableHead>
                         <TableHead>Socials Missing</TableHead>
                         <TableHead>Pain Points</TableHead>
                         <TableHead>Market Research</TableHead>
@@ -223,7 +325,7 @@ export default function ClientAnalysisPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isPending && (
+                      {isAnalyzing && (
                           <TableRow>
                               <TableCell colSpan={7} className="h-24">
                                   <div className="flex justify-center items-center gap-2 text-muted-foreground">
@@ -238,13 +340,17 @@ export default function ClientAnalysisPage() {
                           <TableRow key={row.id}>
                             <TableCell className="font-medium">{history.length - index}</TableCell>
                             <TableCell>{row.date}</TableCell>
-                            <TableCell className="max-w-xs truncate">
+                            <TableCell className="max-w-xs">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <span className="cursor-pointer hover:underline">{row.clientData}</span>
+                                        <div className="truncate flex items-center gap-2 cursor-pointer hover:underline">
+                                            {row.scrapedUrl && <LinkIcon className="h-4 w-4 shrink-0" />}
+                                            <span className="truncate">{row.scrapedUrl || row.clientData}</span>
+                                        </div>
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-md bg-card border-border p-4">
-                                        <p className="text-card-foreground">{row.clientData}</p>
+                                        {row.scrapedUrl && <p className="font-bold mb-2 break-all">{row.scrapedUrl}</p>}
+                                        <p className="text-card-foreground whitespace-pre-wrap break-words">{row.clientData}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TableCell>
@@ -260,8 +366,8 @@ export default function ClientAnalysisPage() {
                                     <TooltipTrigger>
                                       <Badge variant="outline" className="cursor-default border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
                                     </TooltipTrigger>
-                                    <TooltipContent className="bg-card border-border p-4">
-                                      <p className="text-card-foreground">{p.description}</p>
+                                    <TooltipContent className="bg-card border-border p-4 max-w-sm">
+                                      <p className="text-card-foreground whitespace-pre-wrap break-words">{p.description}</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 ))}
@@ -279,7 +385,7 @@ export default function ClientAnalysisPage() {
                                         <span className="cursor-pointer hover:underline max-w-xs truncate block">{row.marketResearch}</span>
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-md bg-card border-border p-4">
-                                        <p className="text-card-foreground">{row.marketResearch}</p>
+                                        <p className="text-card-foreground whitespace-pre-wrap break-words">{row.marketResearch}</p>
                                     </TooltipContent>
                                 </Tooltip>
                               ) : (
@@ -293,7 +399,7 @@ export default function ClientAnalysisPage() {
                           </TableRow>
                         ))
                       ) : (
-                        !isPending && (
+                        !isAnalyzing && (
                         <TableRow>
                           <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                             No analysis history yet.

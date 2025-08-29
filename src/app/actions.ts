@@ -1,10 +1,9 @@
 "use server";
 
 import { analyzeClientPainPoints } from "@/ai/flows/analyze-client-pain-points";
-import type { AnalyzeClientPainPointsOutput } from "@/ai/flows/analyze-client-pain-points";
 import { marketResearchAnalysis } from "@/ai/flows/market-research-analysis";
-import type { MarketResearchAnalysisOutput } from "@/ai/flows/market-research-analysis";
-
+import { scrapeWebsite } from "@/ai/flows/scrape-website";
+import type { AnalyzeClientPainPointsOutput, MarketResearchAnalysisOutput, ScrapeWebsiteOutput } from "@/ai/schemas";
 
 type AnalysisResult = {
   success: boolean;
@@ -45,6 +44,34 @@ export async function performMarketResearch(clientData: string): Promise<MarketR
     } catch (error) {
         console.error("Market research analysis failed:", error);
         const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during market research.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+type ScrapeResult = {
+    success: boolean;
+    data?: ScrapeWebsiteOutput;
+    error?: string;
+};
+
+export async function performScrape(url: string): Promise<ScrapeResult> {
+    if (!url) {
+        return { success: false, error: "URL cannot be empty." };
+    }
+    
+    // Basic URL validation
+    try {
+        new URL(url);
+    } catch (_) {
+        return { success: false, error: "Invalid URL provided." };
+    }
+
+    try {
+        const result = await scrapeWebsite({ url });
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Website scraping failed:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during scraping.";
         return { success: false, error: errorMessage };
     }
 }
