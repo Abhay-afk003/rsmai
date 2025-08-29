@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit } from "lucide-react";
-import { performAnalysis } from "@/app/actions";
+import { Loader2, Download, BrainCircuit, Search } from "lucide-react";
+import { performAnalysis, performMarketResearch } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput } from "@/ai/flows/analyze-client-pain-points";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -19,6 +19,8 @@ type AnalysisResult = {
   socialsMissing: string[];
   painPoints: AnalyzeClientPainPointsOutput["painPoints"];
   feedback: string;
+  marketResearch?: string;
+  isResearching?: boolean;
 };
 
 const socialChecks: { name: string; regex: RegExp }[] = [
@@ -100,6 +102,28 @@ export default function ClientAnalysisPage() {
     });
   };
 
+  const handleMarketResearch = (id: string, clientData: string) => {
+    setHistory(prev => prev.map(item => item.id === id ? { ...item, isResearching: true } : item));
+
+    startTransition(async () => {
+        const result = await performMarketResearch(clientData);
+        if (result.success && result.data) {
+            setHistory(prev => prev.map(item => item.id === id ? { ...item, marketResearch: result.data!.researchSummary, isResearching: false } : item));
+            toast({
+                title: "Market Research Complete",
+                description: "Market research has been added to the analysis.",
+            });
+        } else {
+            setHistory(prev => prev.map(item => item.id === id ? { ...item, isResearching: false } : item));
+            toast({
+                title: "Market Research Failed",
+                description: result.error || "An unknown error occurred.",
+                variant: "destructive",
+            });
+        }
+    });
+  };
+
   const downloadCSV = () => {
     if (history.length === 0) {
       toast({
@@ -109,15 +133,16 @@ export default function ClientAnalysisPage() {
       });
       return;
     }
-    const header = "Count,Date,Client Details,Socials Missing,Pain Points,Feedback\n";
+    const header = "Count,Date,Client Details,Socials Missing,Pain Points,Market Research,Feedback\n";
     const rows = history.map((row, index) => {
       const count = history.length - index;
       const date = row.date;
       const clientDetails = `"${row.clientData.replace(/"/g, '""')}"`;
       const socialsMissing = row.socialsMissing.join(", ");
       const painPoints = `"${row.painPoints.map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
+      const marketResearch = `"${(row.marketResearch || "").replace(/"/g, '""')}"`;
       const feedback = `"${row.feedback.replace(/"/g, '""')}"`;
-      return [count, date, clientDetails, socialsMissing, painPoints, feedback].join(",");
+      return [count, date, clientDetails, socialsMissing, painPoints, marketResearch, feedback].join(",");
     }).reverse().join("\n");
 
     const csvContent = header + rows;
@@ -193,13 +218,14 @@ export default function ClientAnalysisPage() {
                         <TableHead>Client Details</TableHead>
                         <TableHead>Socials Missing</TableHead>
                         <TableHead>Pain Points</TableHead>
+                        <TableHead>Market Research</TableHead>
                         <TableHead className="w-[100px]">Feedback</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isPending && (
                           <TableRow>
-                              <TableCell colSpan={6} className="h-24">
+                              <TableCell colSpan={7} className="h-24">
                                   <div className="flex justify-center items-center gap-2 text-muted-foreground">
                                       <Loader2 className="h-6 w-6 animate-spin" />
                                       <span>Analyzing new entry...</span>
@@ -241,13 +267,35 @@ export default function ClientAnalysisPage() {
                                 ))}
                                </div>
                             </TableCell>
+                            <TableCell>
+                              {row.isResearching ? (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span>Researching...</span>
+                                </div>
+                              ) : row.marketResearch ? (
+                                 <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="cursor-pointer hover:underline max-w-xs truncate block">{row.marketResearch}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-md bg-card border-border p-4">
+                                        <p className="text-card-foreground">{row.marketResearch}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <Button variant="outline" size="sm" onClick={() => handleMarketResearch(row.id, row.clientData)}>
+                                  <Search className="mr-2 h-4 w-4" />
+                                  Research
+                                </Button>
+                              )}
+                            </TableCell>
                             <TableCell className="text-muted-foreground">{row.feedback}</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         !isPending && (
                         <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                             No analysis history yet.
                           </TableCell>
                         </TableRow>

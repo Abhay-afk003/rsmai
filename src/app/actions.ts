@@ -2,6 +2,8 @@
 
 import { analyzeClientPainPoints } from "@/ai/flows/analyze-client-pain-points";
 import type { AnalyzeClientPainPointsOutput } from "@/ai/flows/analyze-client-pain-points";
+import { marketResearchAnalysis } from "@/ai/flows/market-research-analysis";
+import type { MarketResearchAnalysisOutput } from "@/ai/flows/market-research-analysis";
 
 
 type AnalysisResult = {
@@ -24,4 +26,25 @@ export async function performAnalysis(clientData: string): Promise<AnalysisResul
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during analysis.";
     return { success: false, error: errorMessage };
   }
+}
+
+type MarketResearchResult = {
+    success: boolean;
+    data?: MarketResearchAnalysisOutput;
+    error?: string;
+};
+
+export async function performMarketResearch(clientData: string): Promise<MarketResearchResult> {
+    if (!clientData) {
+        return { success: false, error: "Client data cannot be empty." };
+    }
+
+    try {
+        const result = await marketResearchAnalysis({ clientData });
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Market research analysis failed:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during market research.";
+        return { success: false, error: errorMessage };
+    }
 }
