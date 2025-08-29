@@ -7,12 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Link as LinkIcon } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Link as LinkIcon, Globe, MessageSquare } from "lucide-react";
 import { performAnalysis, performMarketResearch, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type ScrapeSource = "website" | "reddit";
 
 type AnalysisResult = {
   id: string;
@@ -45,6 +48,8 @@ function getMissingSocials(text: string): string[] {
 export default function ClientAnalysisPage() {
   const [scrapedData, setScrapedData] = useState("");
   const [urlToScrape, setUrlToScrape] = useState("");
+  const [subreddit, setSubreddit] = useState("");
+  const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [history, setHistory] = useState<AnalysisResult[]>([]);
   const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
@@ -73,25 +78,36 @@ export default function ClientAnalysisPage() {
   }, [history]);
 
   const handleScrapeAndAnalyze = () => {
-    if (!urlToScrape.trim()) {
-      toast({
-        title: "URL required",
-        description: "Please enter a URL to scrape.",
-        variant: "destructive",
-      });
-      return;
+    let url = "";
+    if (scrapeSource === 'website') {
+      if (!urlToScrape.trim()) {
+        toast({ title: "URL required", description: "Please enter a URL to scrape.", variant: "destructive" });
+        return;
+      }
+      url = urlToScrape;
+    } else { // reddit
+       if (!subreddit.trim()) {
+        toast({ title: "Subreddit required", description: "Please enter a subreddit to scrape.", variant: "destructive" });
+        return;
+      }
+      // Construct a URL for scraping. This is a simple approach.
+      // A more robust solution would use the Reddit API.
+      url = `https://www.reddit.com/r/${subreddit}/hot.json`;
     }
-
+    
     let scrapedContent = "";
 
     startScrapingTransition(async () => {
-      const scrapeResult = await performScrape(urlToScrape);
+      // For now, we'll treat both sources as a simple URL fetch.
+      const scrapeResult = await performScrape(url);
       if (scrapeResult.success && scrapeResult.data) {
-        scrapedContent = scrapeResult.data.content;
+        // A simple JSON.stringify for reddit data for now.
+        scrapedContent = scrapeSource === 'reddit' ? JSON.stringify(scrapeResult.data) : scrapeResult.data.content;
+        
         setScrapedData(scrapedContent);
         toast({
           title: "Scraping Complete",
-          description: "Website content has been extracted.",
+          description: "Content has been extracted.",
         });
 
         // Now, perform the analysis
@@ -101,7 +117,7 @@ export default function ClientAnalysisPage() {
             const newResult: AnalysisResult = {
               id: new Date().toISOString(),
               date: new Date().toLocaleDateString(),
-              scrapedUrl: urlToScrape,
+              scrapedUrl: url,
               clientData: scrapedContent,
               socialsMissing: getMissingSocials(scrapedContent),
               painPoints: analysisResult.data.painPoints,
@@ -110,6 +126,7 @@ export default function ClientAnalysisPage() {
             setHistory(prev => [newResult, ...prev]);
             setScrapedData("");
             setUrlToScrape("");
+            setSubreddit("");
             toast({
               title: "Analysis Complete",
               description: "Pain points have been identified and added to history.",
@@ -238,37 +255,66 @@ export default function ClientAnalysisPage() {
               <CardHeader>
                 <CardTitle>Client Data Analysis</CardTitle>
                 <CardDescription>
-                  Scrape a website or paste client data (e.g., from forums, social media) to analyze pain points.
+                  Scrape a website or subreddit, or paste client data to analyze pain points.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
-                <div className="grid gap-2">
-                    <label htmlFor="url-input" className="text-sm font-medium">Scrape from URL</label>
-                    <div className="flex gap-2">
-                        <Input 
-                            id="url-input"
-                            placeholder="https://example.com"
-                            value={urlToScrape}
-                            onChange={(e) => setUrlToScrape(e.target.value)}
-                            disabled={isPending}
-                        />
-                         <Button onClick={handleScrapeAndAnalyze} disabled={isPending || !urlToScrape.trim()}>
-                          {isScraping ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Scraping...
-                            </>
-                          ) : isAnalyzing ? (
-                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Analyzing...
-                            </>
-                          )
-                          : (
-                            "Scrape & Analyze"
-                          )}
-                        </Button>
+                <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] gap-2 items-end">
+                    <div>
+                        <label htmlFor="scrape-source" className="text-sm font-medium">Scrape Source</label>
+                        <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
+                            <SelectTrigger id="scrape-source">
+                                <SelectValue placeholder="Select source" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Website</div></SelectItem>
+                                <SelectItem value="reddit"><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Reddit</div></SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
+
+                    {scrapeSource === 'website' && (
+                        <div>
+                             <label htmlFor="url-input" className="text-sm font-medium">Website URL</label>
+                             <Input 
+                                id="url-input"
+                                placeholder="https://example.com"
+                                value={urlToScrape}
+                                onChange={(e) => setUrlToScrape(e.target.value)}
+                                disabled={isPending}
+                            />
+                        </div>
+                    )}
+                    
+                    {scrapeSource === 'reddit' && (
+                         <div>
+                            <label htmlFor="subreddit-input" className="text-sm font-medium">Subreddit</label>
+                            <Input 
+                                id="subreddit-input"
+                                placeholder="e.g., programming"
+                                value={subreddit}
+                                onChange={(e) => setSubreddit(e.target.value)}
+                                disabled={isPending}
+                            />
+                        </div>
+                    )}
+
+                    <Button onClick={handleScrapeAndAnalyze} disabled={isPending}>
+                      {isScraping ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Scraping...
+                        </>
+                      ) : isAnalyzing ? (
+                         <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      )
+                      : (
+                        "Scrape & Analyze"
+                      )}
+                    </Button>
                 </div>
                 <div className="flex items-center gap-4">
                     <Separator className="flex-1" />
@@ -418,3 +464,5 @@ export default function ClientAnalysisPage() {
     </TooltipProvider>
   );
 }
+
+    
