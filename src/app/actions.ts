@@ -58,18 +58,12 @@ export async function performScrape(input: ScrapeWebsiteInput): Promise<ScrapeRe
     if (!input.query) {
         return { success: false, error: "Query cannot be empty." };
     }
-    
-    if (input.source === 'website') {
-        try {
-            new URL(input.query);
-        } catch (_) {
-            return { success: false, error: "Invalid URL provided for website scraping." };
-        }
-    }
-
 
     try {
         const result = await scrapeWebsite(input);
+        if (result.content.startsWith('Failed to scrape content')) {
+             return { success: false, error: result.content };
+        }
         return { success: true, data: result };
     } catch (error) {
         console.error("Website scraping failed:", error);

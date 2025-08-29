@@ -14,9 +14,8 @@ const scrapeTool = ai.defineTool(
         name: 'extractTextFromWeb',
         description: 'Extracts the text content from a given URL. This can be a general website, a Reddit URL, or a search results page.',
         inputSchema: z.object({
-            url: z.string().url().describe("The URL to scrape. For Reddit, it should point to a subreddit's JSON endpoint (e.g., https://www.reddit.com/r/subreddit/hot.json). For other sources, it can be a direct URL or a search engine results page URL."),
+            url: z.string().url().describe("The URL to scrape. For Reddit, it should point to a subreddit's JSON endpoint (e.g., https://www.reddit.com/r/subreddit/hot.json). For other sources, it should be a Google search URL."),
             source: z.enum(["website", "reddit", "news", "social"]).describe("The type of content being scraped."),
-            query: z.string().optional().describe("The original search query, if applicable.")
         }),
         outputSchema: z.object({
             content: z.string(),
@@ -24,17 +23,7 @@ const scrapeTool = ai.defineTool(
     },
     async (input) => {
         try {
-            // A more robust solution would use a dedicated search API for news/social.
-            // For now, we'll construct a basic search URL for these.
-            let urlToFetch = input.url;
-            if (input.source === 'news' && input.query) {
-                 urlToFetch = `https://www.google.com/search?q=${encodeURIComponent(input.query)}&tbm=nws`;
-            } else if (input.source === 'social' && input.query) {
-                 urlToFetch = `https://www.google.com/search?q=${encodeURIComponent(input.query)}`; // A generic search for social media content.
-            }
-
-
-            const response = await fetch(urlToFetch);
+            const response = await fetch(input.url);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -53,7 +42,7 @@ const scrapeTool = ai.defineTool(
         } catch (error) {
             console.error("Error scraping website:", error);
             // Let the LLM know the scrape failed.
-            return { content: `Failed to scrape content for source "${input.source}" with query "${input.query || input.url}". Please check your input and try again.` };
+            return { content: `Failed to scrape content for source "${input.source}" from url "${input.url}". Please check your input and try again.` };
         }
     }
 );
@@ -66,28 +55,23 @@ const scrapeWebsiteFlow = ai.defineFlow(
     outputSchema: ScrapeWebsiteOutputSchema,
   },
   async (input) => {
-    // The tool expects a URL. For non-URL based queries, we need to construct one.
-    // For Reddit, we create the .json URL.
-    // For others, we'll pass a placeholder and let the tool create a search URL.
-    let url = input.query || '';
-    if (input.source === 'reddit' && input.query) {
-        url = `https://www.reddit.com/r/${input.query}/hot.json`;
-    } else if (input.source === 'website' && input.query) {
-        // Assume query is a URL for website source
-        url = input.query;
-    } else {
-        // For news and social, we pass a placeholder URL as the tool constructs the real one
-        url = 'https://www.google.com';
-    }
+    let url;
 
+    if (input.source === 'reddit') {
+        url = `https://www.reddit.com/r/${input.query}/hot.json`;
+    } else if (input.source === 'news') {
+        url = `https://www.google.com/search?q=${encodeURIComponent(input.query)}&tbm=nws`;
+    } else { // 'website' and 'social'
+        url = `https://www.google.com/search?q=${encodeURIComponent(input.query)}`;
+    }
 
     try {
-        new URL(url); // Validate the constructed or provided URL
+        new URL(url); // Validate the constructed URL
     } catch {
-        return { content: `Invalid URL or query for scraping: ${url}` };
+        return { content: `Invalid URL constructed for scraping: ${url}` };
     }
 
-    const {output} = await scrapeTool({url, source: input.source, query: input.query});
+    const {output} = await scrapeTool({url, source: input.source});
     
     // Ensure we always return a valid object.
     return output || { content: `Scraping failed for source "${input.source}" with query "${input.query}". The tool did not return any content.` };
