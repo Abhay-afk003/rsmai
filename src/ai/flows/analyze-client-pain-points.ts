@@ -23,18 +23,20 @@ const prompt = ai.definePrompt({
 
   Client Data: {{{clientData}}}
 
-  Format your output as a JSON array of objects with "category" and "description" fields for each pain point.
+  Format your output as a JSON object with a "painPoints" field which is an array of objects with "category" and "description" fields for each pain point.
   Example:
-  [
-    {
-      "category": "Pricing",
-      "description": "Clients are concerned about the high cost of the product."
-    },
-    {
-      "category": "Customer Support",
-      "description": "Clients are frustrated with the slow response times from customer support."
-    }
-  ]
+  {
+    "painPoints": [
+      {
+        "category": "Pricing",
+        "description": "Clients are concerned about the high cost of the product."
+      },
+      {
+        "category": "Customer Support",
+        "description": "Clients are frustrated with the slow response times from customer support."
+      }
+    ]
+  }
   `,
 });
 

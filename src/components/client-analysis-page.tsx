@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,8 +47,8 @@ function getMissingSocials(text: string): string[] {
   return missing;
 }
 
-const sourceConfig = {
-    website: { label: "Website URL", placeholder: "https://example.com", icon: Globe },
+const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; icon: React.ElementType }> = {
+    website: { label: "ICP Details (Query)", placeholder: "e.g., 'small business marketing tools'", icon: Globe },
     reddit: { label: "Subreddit", placeholder: "e.g., programming", icon: MessageSquare },
     news: { label: "News Articles Query", placeholder: "e.g., AI in healthcare", icon: Newspaper },
     social: { label: "Social Media Query", placeholder: "e.g., #customerfeedback", icon: Users },
@@ -111,8 +111,8 @@ export default function ClientAnalysisPage() {
             const newResult: AnalysisResult = {
               id: new Date().toISOString(),
               date: new Date().toLocaleDateString(),
-              scrapedUrl: scrapeSource === 'website' ? scrapeQuery : undefined,
-              scrapeQuery: scrapeSource !== 'website' ? scrapeQuery : undefined,
+              scrapedUrl: undefined, // We are not using URL anymore for 'website'
+              scrapeQuery: scrapeQuery,
               scrapeSource: scrapeSource,
               clientData: scrapedContent,
               socialsMissing: getMissingSocials(scrapedContent),
@@ -253,7 +253,7 @@ export default function ClientAnalysisPage() {
               <CardHeader>
                 <CardTitle>Client Data Analysis</CardTitle>
                 <CardDescription>
-                  Scrape data from various sources, or paste it manually to analyze pain points.
+                  Scrape data from various sources based on your Ideal Customer Profile (ICP), or paste it manually to analyze pain points.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
@@ -265,7 +265,7 @@ export default function ClientAnalysisPage() {
                                 <SelectValue placeholder="Select source" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Website</div></SelectItem>
+                                <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Web & Public Data</div></SelectItem>
                                 <SelectItem value="reddit"><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Reddit</div></SelectItem>
                                 <SelectItem value="news"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" /> News Articles</div></SelectItem>
                                 <SelectItem value="social"><div className="flex items-center gap-2"><Users className="h-4 w-4" /> Social Media</div></SelectItem>
