@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail, ChevronDown, ChevronUp } from "lucide-react";
 import { performPainPointAnalysis, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -42,6 +42,7 @@ export default function ClientAnalysisPage() {
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
+  const [expandedMobile, setExpandedMobile] = useState<Record<string, boolean>>({});
   const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
   const isPending = isScraping || isAnalyzing;
@@ -67,6 +68,10 @@ export default function ClientAnalysisPage() {
         console.error("Failed to save history to sessionStorage", error);
     }
   }, [history]);
+  
+  const toggleMobileExpand = (id: string) => {
+    setExpandedMobile(prev => ({...prev, [id]: !prev[id]}));
+  };
 
   const handleScrape = () => {
     if (!scrapeQuery.trim()) {
@@ -186,8 +191,8 @@ export default function ClientAnalysisPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] gap-2 items-end">
-                    <div>
+                <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] gap-4 items-end">
+                    <div className="grid gap-2">
                         <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
                         <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
                             <SelectTrigger id="scrape-source">
@@ -202,7 +207,7 @@ export default function ClientAnalysisPage() {
                         </Select>
                     </div>
 
-                    <div>
+                    <div className="grid gap-2">
                          <label htmlFor="query-input" className="text-sm font-medium">{currentSourceConfig.label}</label>
                          <Input 
                             id="query-input"
@@ -213,7 +218,7 @@ export default function ClientAnalysisPage() {
                         />
                     </div>
                     
-                    <Button onClick={handleScrape} disabled={isPending}>
+                    <Button onClick={handleScrape} disabled={isPending} className="w-full md:w-auto">
                       {isScraping ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -292,20 +297,21 @@ export default function ClientAnalysisPage() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
+              <CardHeader className="flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
                   <CardTitle>Research History</CardTitle>
                   <CardDescription>
                     A log of all your scraped contacts. Results are saved in your browser session.
                   </CardDescription>
                 </div>
-                <Button onClick={downloadCSV} variant="outline" size="sm" disabled={history.length === 0}>
+                <Button onClick={downloadCSV} variant="outline" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
                   <Download className="mr-2 h-4 w-4" />
                   Download CSV
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="border rounded-md">
+                {/* Desktop Table */}
+                <div className="border rounded-md hidden md:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -316,16 +322,6 @@ export default function ClientAnalysisPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isAnalyzing && (
-                          <TableRow>
-                              <TableCell colSpan={4} className="h-24">
-                                  <div className="flex justify-center items-center gap-2 text-muted-foreground">
-                                      <Loader2 className="h-6 w-6 animate-spin" />
-                                      <span>Analyzing...</span>
-                                  </div>
-                              </TableCell>
-                          </TableRow>
-                      )}
                       {history.length > 0 ? (
                         history.map((row) => (
                           <TableRow key={row.id}>
@@ -380,16 +376,87 @@ export default function ClientAnalysisPage() {
                           </TableRow>
                         ))
                       ) : (
-                        !isAnalyzing && (
                         <TableRow>
                           <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                            No research history yet.
+                            {isAnalyzing ? (
+                                <div className="flex justify-center items-center gap-2 text-muted-foreground">
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                    <span>Analyzing...</span>
+                                </div>
+                            ) : "No research history yet."}
                           </TableCell>
                         </TableRow>
-                        )
                       )}
                     </TableBody>
                   </Table>
+                </div>
+                {/* Mobile Cards */}
+                <div className="grid gap-4 md:hidden">
+                    {history.length > 0 ? (
+                        history.map(row => (
+                            <Card key={row.id}>
+                                <CardHeader>
+                                    <CardTitle className="text-base truncate">{row.contact.name || 'Unnamed Contact'}</CardTitle>
+                                    <CardDescription>{row.date}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="grid gap-4 text-sm">
+                                    { (isAnalyzing && !row.painPoints && row.isAnalyzingPainPoints) ? (
+                                        <div className="flex items-center justify-center gap-2 text-muted-foreground py-4">
+                                            <Loader2 className="h-5 w-5 animate-spin" />
+                                            <span>Analyzing...</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex flex-col gap-2">
+                                                <h4 className="font-semibold">Contact Info</h4>
+                                                <div className="flex flex-col gap-1.5 text-xs">
+                                                    {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>)}</div></div>}
+                                                    {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
+                                                    {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <h4 className="font-semibold">Pain Points</h4>
+                                                {row.isAnalyzingPainPoints ? (
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                        <span>Analyzing...</span>
+                                                    </div>
+                                                ) : row.painPoints ? (
+                                                    <div className="flex gap-1.5 flex-wrap">
+                                                        {row.painPoints.map((p, i) => (
+                                                            <Tooltip key={i}>
+                                                                <TooltipTrigger>
+                                                                    <Badge variant="outline" className="cursor-default border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="bg-card border-border p-4 max-w-xs">
+                                                                    <p className="text-card-foreground whitespace-pre-wrap break-words">{p.description}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, row.contact.summary)}>
+                                                        <Search className="mr-2 h-4 w-4" />
+                                                        Analyze Pain Points
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        ))
+                    ) : (
+                        <div className="h-24 text-center text-muted-foreground flex items-center justify-center">
+                            {isAnalyzing ? (
+                                <div className="flex justify-center items-center gap-2 text-muted-foreground">
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                    <span>Analyzing...</span>
+                                </div>
+                            ) : "No research history yet."}
+                        </div>
+                    )}
                 </div>
               </CardContent>
             </Card>
