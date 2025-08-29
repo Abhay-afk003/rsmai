@@ -1,35 +1,36 @@
 'use server';
 /**
- * @fileOverview Scrapes a website to extract its text content.
+ * @fileOverview Scrapes websites to extract contact information.
  *
- * - scrapeWebsite - A function that handles scraping a website.
+ * - scrapeWebsite - A function that handles scraping a website for contact details.
  */
 
 import {ai} from '@/ai/genkit';
 import { ScrapeWebsiteInput, ScrapeWebsiteInputSchema, ScrapeWebsiteMultiOutput, ScrapeWebsiteMultiOutputSchema } from '@/ai/schemas';
 
-const scrapeAndSummarizePrompt = ai.definePrompt({
-    name: 'scrapeAndSummarize',
+const scrapeAndExtractPrompt = ai.definePrompt({
+    name: 'scrapeAndExtract',
     input: { schema: ScrapeWebsiteInputSchema },
     output: { schema: ScrapeWebsiteMultiOutputSchema },
-    prompt: `You are a web scraping and summarization expert. Your task is to perform a search based on the user's query and source, and then provide a list of relevant results with summaries.
+    prompt: `You are an expert data scraper specializing in finding contact information. Your task is to perform a search based on the user's query and source, and then extract key contact details for up to 10 relevant individuals or companies.
 
     1. Construct the appropriate search URL.
-        - For Reddit, use: https://www.reddit.com/r/\{query\}/hot.json
+        - For Reddit, use: https://www.reddit.com/search/?q=\{query\}
         - For News, use a Google News search: https://www.google.com/search?q=\{query\}&tbm=nws
-        - For Social Media, use a Google search: https://www.google.com/search?q=\{query\}
-        - For Web & Public Data, use a Google search: https://www.google.com/search?q=\{query\}
+        - For Social Media, use a Google search for profiles: https://www.google.com/search?q=\{query\} social media profile
+        - For Web & Public Data, use a standard Google search: https://www.google.com/search?q=\{query\}
 
-    2. Fetch the content from the URL.
+    2. Fetch content from the top search results.
 
-    3. Parse the content to identify up to 10 distinct, relevant results.
-        - For Reddit, each post is a result.
-        - For Google search, each search result is a result.
+    3. For each distinct and relevant result, parse the content to extract the following information:
+        - 'name': The full name of the person or company.
+        - 'sourceUrl': The direct URL where the information was found.
+        - 'summary': A brief summary of the context or information available about the contact.
+        - 'socialMediaLinks': Any associated social media profile URLs (e.g., LinkedIn, Twitter).
+        - 'phoneNumbers': Any contact phone numbers found.
+        - 'emails': Any contact email addresses found.
 
-    4. For each result, extract the following:
-        - A concise title.
-        - The direct URL to the result.
-        - A brief, informative summary of the content.
+    4. If a piece of information (e.g., phone number) is not found, omit the key.
 
     5. Format the output as a JSON object that adheres to the ScrapeWebsiteMultiOutputSchema.
 
@@ -46,7 +47,7 @@ const scrapeWebsiteFlow = ai.defineFlow(
     outputSchema: ScrapeWebsiteMultiOutputSchema,
   },
   async (input) => {
-    const { output } = await scrapeAndSummarizePrompt(input);
+    const { output } = await scrapeAndExtractPrompt(input);
     return output || { results: [] };
   }
 );

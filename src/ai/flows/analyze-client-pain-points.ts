@@ -16,24 +16,24 @@ const prompt = ai.definePrompt({
   name: 'analyzeClientPainPointsPrompt',
   input: {schema: AnalyzeClientPainPointsInputSchema},
   output: {schema: AnalyzeClientPainPointsOutputSchema},
-  prompt: `You are an AI assistant specializing in analyzing client data to identify pain points.
+  prompt: `You are an aggressive sales analyst. Your job is to analyze the provided data and identify critical pain points that a salesperson can bring up in a conversation. Be direct and concise.
 
-  Analyze the following client data and identify the key pain points expressed by the clients.
-  Categorize each pain point and provide a detailed description.
+  Analyze the following data and extract the key pain points. Phrase them in a way that can be used directly in a sales pitch.
 
   Client Data: {{{clientData}}}
 
-  Format your output as a JSON object with a "painPoints" field which is an array of objects with "category" and "description" fields for each pain point.
+  Format your output as a JSON object with a "painPoints" field, which is an array of objects. Each object should have a "category" (e.g., "Operations", "Marketing", "Finance") and a "description" that is a direct, hard-hitting statement about the pain point.
+
   Example:
   {
     "painPoints": [
       {
-        "category": "Pricing",
-        "description": "Clients are concerned about the high cost of the product."
+        "category": "Marketing",
+        "description": "Your current marketing strategy seems to be failing to reach your target audience."
       },
       {
         "category": "Customer Support",
-        "description": "Clients are frustrated with the slow response times from customer support."
+        "description": "It looks like your customers are getting frustrated with slow support response times."
       }
     ]
   }

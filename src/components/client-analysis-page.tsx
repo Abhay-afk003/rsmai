@@ -3,66 +3,45 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users } from "lucide-react";
-import { performAnalysis, performMarketResearch, performScrape } from "@/app/actions";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail } from "lucide-react";
+import { performPainPointAnalysis, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Textarea } from "@/components/ui/textarea";
 
 type ScrapeSource = "website" | "reddit" | "news" | "social";
 
-type AnalysisResult = {
+type AnalysisHistoryItem = {
   id: string;
   date: string;
-  scrapedUrl?: string;
-  scrapeQuery?: string;
-  scrapeSource?: ScrapeSource;
-  clientData: string;
-  socialsMissing: string[];
-  painPoints: AnalyzeClientPainPointsOutput["painPoints"];
-  feedback: string;
-  marketResearch?: string;
-  isResearching?: boolean;
+  scrapeQuery: string;
+  scrapeSource: ScrapeSource;
+  contact: ScrapedResult;
+  isAnalyzingPainPoints?: boolean;
+  painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
 };
 
-const socialChecks: { name: string; regex: RegExp }[] = [
-  { name: "Email", regex: /\S+@\S+\.\S+/ },
-  { name: "Twitter", regex: /twitter\.com/ },
-  { name: "LinkedIn", regex: /linkedin\.com/ },
-];
-
-function getMissingSocials(text: string): string[] {
-  const missing: string[] = [];
-  socialChecks.forEach(social => {
-    if (!social.regex.test(text)) {
-      missing.push(social.name);
-    }
-  });
-  return missing;
-}
-
 const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; icon: React.ElementType }> = {
-    website: { label: "ICP Details (Query)", placeholder: "e.g., 'small business marketing tools'", icon: Globe },
-    reddit: { label: "Subreddit", placeholder: "e.g., programming", icon: MessageSquare },
-    news: { label: "News Articles Query", placeholder: "e.g., AI in healthcare", icon: Newspaper },
-    social: { label: "Social Media Query", placeholder: "e.g., #customerfeedback", icon: Users },
+    website: { label: "ICP Details (Query)", placeholder: "e.g., 'marketing managers in tech startups'", icon: Globe },
+    reddit: { label: "Topic/Subreddit", placeholder: "e.g., 'saas founders'", icon: MessageSquare },
+    news: { label: "News Articles Query", placeholder: "e.g., 'companies seeking funding'", icon: Newspaper },
+    social: { label: "Social Media Query", placeholder: "e.g., '#startup looking for developers'", icon: Users },
 }
 
-type ScrapedItem = ScrapedResult & { isAnalyzing?: boolean; id: string };
+type ScrapedItem = ScrapedResult & { id: string };
 
 export default function ClientAnalysisPage() {
-  const [manualInput, setManualInput] = useState("");
   const [scrapeQuery, setScrapeQuery] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
-  const [history, setHistory] = useState<AnalysisResult[]>([]);
+  const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
   const isPending = isScraping || isAnalyzing;
@@ -105,7 +84,7 @@ export default function ClientAnalysisPage() {
         setScrapeQuery("");
         toast({
           title: "Scraping Complete",
-          description: `${scrapeResult.data.results.length} results found.`,
+          description: `${scrapeResult.data.results.length} contacts found.`,
         });
       } else {
         toast({
@@ -117,97 +96,37 @@ export default function ClientAnalysisPage() {
     });
   };
 
-  const handleAnalyzeResult = (resultId: string) => {
-    const resultToAnalyze = scrapedResults.find(r => r.id === resultId);
-    if (!resultToAnalyze) return;
-
-    setScrapedResults(prev => prev.map(r => r.id === resultId ? { ...r, isAnalyzing: true } : r));
-
-    startAnalyzingTransition(async () => {
-      const analysisResult = await performAnalysis(resultToAnalyze.summary);
-      if (analysisResult.success && analysisResult.data) {
-        const newResult: AnalysisResult = {
-          id: new Date().toISOString(),
-          date: new Date().toLocaleDateString(),
-          scrapedUrl: resultToAnalyze.url,
-          scrapeQuery: scrapeQuery,
-          scrapeSource: scrapeSource,
-          clientData: resultToAnalyze.summary,
-          socialsMissing: getMissingSocials(resultToAnalyze.summary),
-          painPoints: analysisResult.data.painPoints,
-          feedback: "N/A",
-        };
-        setHistory(prev => [newResult, ...prev]);
-        setScrapedResults(prev => prev.filter(r => r.id !== resultId)); // Remove from list
-        toast({
-          title: "Analysis Complete",
-          description: "Pain points have been identified and added to history.",
-        });
-      } else {
-        toast({
-          title: "Analysis Failed",
-          description: analysisResult.error || "An unknown error occurred.",
-          variant: "destructive",
-        });
-        setScrapedResults(prev => prev.map(r => r.id === resultId ? { ...r, isAnalyzing: false } : r));
-      }
+  const handleAddToHistory = (result: ScrapedItem) => {
+    const newHistoryItem: AnalysisHistoryItem = {
+      id: result.id,
+      date: new Date().toLocaleDateString(),
+      scrapeQuery: scrapeQuery,
+      scrapeSource: scrapeSource,
+      contact: result,
+    };
+    setHistory(prev => [newHistoryItem, ...prev]);
+    setScrapedResults(prev => prev.filter(r => r.id !== result.id));
+    toast({
+      title: "Contact Added",
+      description: `${result.name || 'Unnamed contact'} has been added to your research history.`,
     });
   };
 
-
-  const handleManualAnalysis = () => {
-    if (!manualInput.trim()) {
-      toast({
-        title: "Input required",
-        description: "Please paste some client data to analyze.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handlePainPointAnalysis = (id: string, clientData: string) => {
+    setHistory(prev => prev.map(item => item.id === id ? { ...item, isAnalyzingPainPoints: true } : item));
 
     startAnalyzingTransition(async () => {
-      const result = await performAnalysis(manualInput);
-      if (result.success && result.data) {
-        const newResult: AnalysisResult = {
-          id: new Date().toISOString(),
-          date: new Date().toLocaleDateString(),
-          clientData: manualInput,
-          socialsMissing: getMissingSocials(manualInput),
-          painPoints: result.data.painPoints,
-          feedback: "N/A",
-        };
-        setHistory(prev => [newResult, ...prev]);
-        setManualInput("");
-        toast({
-          title: "Analysis Complete",
-          description: "Pain points have been identified and added to history.",
-        });
-      } else {
-        toast({
-          title: "Analysis Failed",
-          description: result.error || "An unknown error occurred.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-
-
-  const handleMarketResearch = (id: string, clientData: string) => {
-    setHistory(prev => prev.map(item => item.id === id ? { ...item, isResearching: true } : item));
-
-    startAnalyzingTransition(async () => {
-        const result = await performMarketResearch(clientData);
+        const result = await performPainPointAnalysis(clientData);
         if (result.success && result.data) {
-            setHistory(prev => prev.map(item => item.id === id ? { ...item, marketResearch: result.data!.researchSummary, isResearching: false } : item));
+            setHistory(prev => prev.map(item => item.id === id ? { ...item, painPoints: result.data!.painPoints, isAnalyzingPainPoints: false } : item));
             toast({
-                title: "Market Research Complete",
-                description: "Market research has been added to the analysis.",
+                title: "Pain Point Analysis Complete",
+                description: "Direct pain points have been identified.",
             });
         } else {
-            setHistory(prev => prev.map(item => item.id === id ? { ...item, isResearching: false } : item));
+            setHistory(prev => prev.map(item => item.id === id ? { ...item, isAnalyzingPainPoints: false } : item));
             toast({
-                title: "Market Research Failed",
+                title: "Analysis Failed",
                 description: result.error || "An unknown error occurred.",
                 variant: "destructive",
             });
@@ -217,33 +136,32 @@ export default function ClientAnalysisPage() {
 
   const downloadCSV = () => {
     if (history.length === 0) {
-      toast({
-        title: "No data to download",
-        description: "Please run an analysis first.",
-        variant: "destructive"
-      });
+      toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
       return;
     }
-    const header = "Count,Date,Source,Query/URL,Client Details,Socials Missing,Pain Points,Market Research,Feedback\n";
-    const rows = history.map((row, index) => {
-      const count = history.length - index;
+    const header = "Date,Source,Query,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points\n";
+    const rows = history.map((row) => {
+      const { contact, painPoints } = row;
       const date = row.date;
-      const source = row.scrapeSource || 'manual';
-      const queryOrUrl = `"${row.scrapedUrl || row.scrapeQuery || ''}"`;
-      const clientDetails = `"${row.clientData.replace(/"/g, '""')}"`;
-      const socialsMissing = row.socialsMissing.join(", ");
-      const painPoints = `"${row.painPoints.map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
-      const marketResearch = `"${(row.marketResearch || "").replace(/"/g, '""')}"`;
-      const feedback = `"${row.feedback.replace(/"/g, '""')}"`;
-      return [count, date, source, queryOrUrl, clientDetails, socialsMissing, painPoints, marketResearch, feedback].join(",");
-    }).reverse().join("\n");
+      const source = row.scrapeSource;
+      const query = `"${row.scrapeQuery.replace(/"/g, '""')}"`;
+      const name = `"${contact.name || ''}"`;
+      const sourceUrl = `"${contact.sourceUrl}"`;
+      const summary = `"${(contact.summary || "").replace(/"/g, '""')}"`;
+      const emails = `"${(contact.emails || []).join(", ")}"`;
+      const phones = `"${(contact.phoneNumbers || []).join(", ")}"`;
+      const socials = `"${(contact.socialMediaLinks || []).join(", ")}"`;
+      const painPointsStr = `"${(painPoints || []).map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
+      
+      return [date, source, query, name, sourceUrl, summary, emails, phones, socials, painPointsStr].join(",");
+    }).join("\n");
 
     const csvContent = header + rows;
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "rsm-insights-analysis.csv");
+    link.setAttribute("download", "rsm-contact-analysis.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -262,9 +180,9 @@ export default function ClientAnalysisPage() {
           <div className="grid gap-8 max-w-7xl mx-auto">
             <Card>
               <CardHeader>
-                <CardTitle>Client Data Analysis</CardTitle>
+                <CardTitle>Contact Scraping</CardTitle>
                 <CardDescription>
-                  Scrape data from various sources based on your Ideal Customer Profile (ICP), or paste it manually to analyze pain points.
+                  Scrape contact details from various sources based on your Ideal Customer Profile (ICP).
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
@@ -302,63 +220,67 @@ export default function ClientAnalysisPage() {
                           Scraping...
                         </>
                       ) : (
-                        "Scrape"
+                        "Scrape Contacts"
                       )}
                     </Button>
                 </div>
 
                 {scrapedResults.length > 0 && (
                     <div className="border rounded-lg p-4">
-                        <h3 className="font-semibold mb-2">Scraped Results</h3>
+                        <h3 className="font-semibold mb-2">Scraped Contacts</h3>
                         <Accordion type="single" collapsible className="w-full">
                             {scrapedResults.map((result) => (
                                 <AccordionItem value={result.id} key={result.id}>
                                     <AccordionTrigger>
                                         <div className="flex justify-between items-center w-full pr-4">
-                                            <span className="truncate text-left">{result.title}</span>
-                                            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAnalyzeResult(result.id); }} disabled={result.isAnalyzing || isAnalyzing}>
-                                                {result.isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin"/> : "Analyze"}
+                                            <div className="flex items-center gap-2">
+                                                <User className="h-4 w-4" />
+                                                <span className="truncate text-left font-semibold">{result.name || "Unnamed Contact"}</span>
+                                            </div>
+                                            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAddToHistory(result); }}>
+                                                Add to History
                                             </Button>
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        <p className="text-sm text-muted-foreground mb-2">{result.summary}</p>
-                                        <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-                                            {result.url}
-                                        </a>
+                                        <p className="text-sm text-muted-foreground mb-4">{result.summary}</p>
+                                        <div className="grid gap-2 text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                                <a href={result.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                                                    {result.sourceUrl}
+                                                </a>
+                                            </div>
+                                            {result.emails && result.emails.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <Mail className="h-4 w-4 text-muted-foreground" />
+                                                    <span>{result.emails.join(", ")}</span>
+                                                </div>
+                                            )}
+                                            {result.phoneNumbers && result.phoneNumbers.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <Phone className="h-4 w-4 text-muted-foreground" />
+                                                    <span>{result.phoneNumbers.join(", ")}</span>
+                                                </div>
+                                            )}
+                                            {result.socialMediaLinks && result.socialMediaLinks.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {result.socialMediaLinks.map(link => (
+                                                            <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(link).hostname}</a>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </AccordionContent>
                                 </AccordionItem>
                             ))}
                         </Accordion>
                     </div>
                 )}
-
-
-                <div className="flex items-center gap-4">
-                    <Separator className="flex-1" />
-                    <span className="text-xs text-muted-foreground">OR</span>
-                    <Separator className="flex-1" />
-                </div>
-                <Textarea
-                  placeholder="Paste client data here..."
-                  className="min-h-[150px] text-sm"
-                  value={manualInput}
-                  onChange={(e) => setManualInput(e.target.value)}
-                  disabled={isPending}
-                />
               </CardContent>
-              <CardFooter>
-                <Button onClick={handleManualAnalysis} disabled={isPending || !manualInput.trim()}>
-                  {isAnalyzing && !isScraping ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    "Analyze Pasted Text"
-                  )}
-                </Button>
-              </CardFooter>
             </Card>
 
             <Card>
@@ -366,7 +288,7 @@ export default function ClientAnalysisPage() {
                 <div>
                   <CardTitle>Research History</CardTitle>
                   <CardDescription>
-                    A log of all your past analyses. Results are saved in your browser session.
+                    A log of all your scraped contacts. Results are saved in your browser session.
                   </CardDescription>
                 </div>
                 <Button onClick={downloadCSV} variant="outline" size="sm" disabled={history.length === 0}>
@@ -379,59 +301,56 @@ export default function ClientAnalysisPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[50px]">#</TableHead>
                         <TableHead className="w-[100px]">Date</TableHead>
-                        <TableHead>Client Details / Source</TableHead>
-                        <TableHead>Socials Missing</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Contact Info</TableHead>
                         <TableHead>Pain Points</TableHead>
-                        <TableHead>Market Research</TableHead>
-                        <TableHead className="w-[100px]">Feedback</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isAnalyzing && (
                           <TableRow>
-                              <TableCell colSpan={7} className="h-24">
+                              <TableCell colSpan={4} className="h-24">
                                   <div className="flex justify-center items-center gap-2 text-muted-foreground">
                                       <Loader2 className="h-6 w-6 animate-spin" />
-                                      <span>Analyzing new entry...</span>
+                                      <span>Analyzing...</span>
                                   </div>
                               </TableCell>
                           </TableRow>
                       )}
                       {history.length > 0 ? (
-                        history.map((row, index) => (
+                        history.map((row) => (
                           <TableRow key={row.id}>
-                            <TableCell className="font-medium">{history.length - index}</TableCell>
                             <TableCell>{row.date}</TableCell>
                             <TableCell className="max-w-xs">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="truncate flex items-center gap-2 cursor-pointer hover:underline">
-                                            {row.scrapeSource && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <span>{React.createElement(sourceConfig[row.scrapeSource].icon, { className: "h-4 w-4 shrink-0" })}</span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>{row.scrapeSource}</TooltipContent>
-                                                </Tooltip>
-                                            )}
-                                            <span className="truncate">{row.scrapedUrl || row.scrapeQuery || row.clientData}</span>
-                                        </div>
+                                        <div className="font-semibold cursor-pointer hover:underline truncate">{row.contact.name || 'Unnamed Contact'}</div>
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-md bg-card border-border p-4">
-                                        {row.scrapeSource && <p className="font-bold mb-2 break-all">{row.scrapeQuery || row.scrapedUrl}</p>}
-                                        <p className="text-card-foreground whitespace-pre-wrap break-words">{row.clientData}</p>
+                                        <p className="font-bold mb-2">{row.contact.name}</p>
+                                        <p className="text-card-foreground whitespace-pre-wrap break-words">{row.contact.summary}</p>
+                                        <a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-2 block truncate">
+                                            Source: {row.contact.sourceUrl}
+                                        </a>
                                     </TooltipContent>
                                 </Tooltip>
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-1 flex-wrap">
-                                {row.socialsMissing.length > 0 ? row.socialsMissing.map(s => <Badge key={s} variant="secondary">{s}</Badge>) : <span className="text-muted-foreground text-xs">All found</span>}
+                              <div className="flex flex-col gap-1.5 text-xs">
+                                {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {row.contact.emails.join(', ')}</div>}
+                                {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {row.contact.phoneNumbers.join(', ')}</div>}
+                                {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> {row.contact.socialMediaLinks.map(l => new URL(l).hostname).join(', ')}</div>}
                               </div>
                             </TableCell>
                             <TableCell>
-                               <div className="flex gap-1.5 flex-wrap max-w-md">
+                              {row.isAnalyzingPainPoints ? (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span>Analyzing...</span>
+                                </div>
+                              ) : row.painPoints ? (
+                                <div className="flex gap-1.5 flex-wrap max-w-md">
                                 {row.painPoints.map((p, i) => (
                                   <Tooltip key={i}>
                                     <TooltipTrigger>
@@ -443,37 +362,20 @@ export default function ClientAnalysisPage() {
                                   </Tooltip>
                                 ))}
                                </div>
-                            </TableCell>
-                            <TableCell>
-                              {row.isResearching ? (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  <span>Researching...</span>
-                                </div>
-                              ) : row.marketResearch ? (
-                                 <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span className="cursor-pointer hover:underline max-w-xs truncate block">{row.marketResearch}</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-md bg-card border-border p-4">
-                                        <p className="text-card-foreground whitespace-pre-wrap break-words">{row.marketResearch}</p>
-                                    </TooltipContent>
-                                </Tooltip>
                               ) : (
-                                <Button variant="outline" size="sm" onClick={() => handleMarketResearch(row.id, row.clientData)}>
+                                <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, row.contact.summary)}>
                                   <Search className="mr-2 h-4 w-4" />
-                                  Research
+                                  Analyze Pain Points
                                 </Button>
                               )}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">{row.feedback}</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         !isAnalyzing && (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                            No analysis history yet.
+                          <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                            No research history yet.
                           </TableCell>
                         </TableRow>
                         )
