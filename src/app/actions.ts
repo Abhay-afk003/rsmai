@@ -1,0 +1,27 @@
+"use server";
+
+import { analyzeClientPainPoints } from "@/ai/flows/analyze-client-pain-points";
+import type { AnalyzeClientPainPointsOutput } from "@/ai/flows/analyze-client-pain-points";
+
+
+type AnalysisResult = {
+  success: boolean;
+  data?: AnalyzeClientPainPointsOutput;
+  error?: string;
+};
+
+export async function performAnalysis(clientData: string): Promise<AnalysisResult> {
+  if (!clientData) {
+    return { success: false, error: "Client data cannot be empty." };
+  }
+
+  try {
+    const result = await analyzeClientPainPoints({ clientData });
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("AI analysis failed:", error);
+    // Genkit can sometimes throw complex objects. Let's try to get a message.
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during analysis.";
+    return { success: false, error: errorMessage };
+  }
+}
