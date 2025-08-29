@@ -3,7 +3,7 @@
 import { analyzeClientPainPoints } from "@/ai/flows/analyze-client-pain-points";
 import { marketResearchAnalysis } from "@/ai/flows/market-research-analysis";
 import { scrapeWebsite } from "@/ai/flows/scrape-website";
-import type { AnalyzeClientPainPointsOutput, MarketResearchAnalysisOutput, ScrapeWebsiteOutput, ScrapeWebsiteInput } from "@/ai/schemas";
+import type { AnalyzeClientPainPointsOutput, MarketResearchAnalysisOutput, ScrapeWebsiteMultiOutput, ScrapeWebsiteInput } from "@/ai/schemas";
 
 type AnalysisResult = {
   success: boolean;
@@ -50,7 +50,7 @@ export async function performMarketResearch(clientData: string): Promise<MarketR
 
 type ScrapeResult = {
     success: boolean;
-    data?: ScrapeWebsiteOutput;
+    data?: ScrapeWebsiteMultiOutput;
     error?: string;
 };
 
@@ -61,8 +61,8 @@ export async function performScrape(input: ScrapeWebsiteInput): Promise<ScrapeRe
 
     try {
         const result = await scrapeWebsite(input);
-        if (result.content.startsWith('Failed to scrape content')) {
-             return { success: false, error: result.content };
+        if (!result.results || result.results.length === 0) {
+             return { success: false, error: "Scraping did not return any results." };
         }
         return { success: true, data: result };
     } catch (error) {

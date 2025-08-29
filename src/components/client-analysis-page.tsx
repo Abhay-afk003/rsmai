@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Link as LinkIcon, Globe, MessageSquare, Newspaper, Users } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users } from "lucide-react";
 import { performAnalysis, performMarketResearch, performScrape } from "@/app/actions";
-import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput } from "@/ai/schemas";
+import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type ScrapeSource = "website" | "reddit" | "news" | "social";
 
@@ -54,10 +55,13 @@ const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; i
     social: { label: "Social Media Query", placeholder: "e.g., #customerfeedback", icon: Users },
 }
 
+type ScrapedItem = ScrapedResult & { isAnalyzing?: boolean; id: string };
+
 export default function ClientAnalysisPage() {
-  const [scrapedData, setScrapedData] = useState("");
+  const [manualInput, setManualInput] = useState("");
   const [scrapeQuery, setScrapeQuery] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
+  const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
   const [history, setHistory] = useState<AnalysisResult[]>([]);
   const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
@@ -85,54 +89,23 @@ export default function ClientAnalysisPage() {
     }
   }, [history]);
 
-  const handleScrapeAndAnalyze = () => {
+  const handleScrape = () => {
     if (!scrapeQuery.trim()) {
       toast({ title: "Input required", description: `Please enter a ${sourceConfig[scrapeSource].label}.`, variant: "destructive" });
       return;
     }
 
-    let scrapedContent = "";
+    setScrapedResults([]);
     const scrapeInput: ScrapeWebsiteInput = { source: scrapeSource, query: scrapeQuery };
 
     startScrapingTransition(async () => {
       const scrapeResult = await performScrape(scrapeInput);
       if (scrapeResult.success && scrapeResult.data) {
-        scrapedContent = scrapeResult.data.content;
-        
-        setScrapedData(scrapedContent);
+        setScrapedResults(scrapeResult.data.results.map(r => ({ ...r, id: new Date().toISOString() + Math.random() })));
+        setScrapeQuery("");
         toast({
           title: "Scraping Complete",
-          description: "Content has been extracted.",
-        });
-
-        startAnalyzingTransition(async () => {
-          const analysisResult = await performAnalysis(scrapedContent);
-          if (analysisResult.success && analysisResult.data) {
-            const newResult: AnalysisResult = {
-              id: new Date().toISOString(),
-              date: new Date().toLocaleDateString(),
-              scrapedUrl: undefined, // We are not using URL anymore for 'website'
-              scrapeQuery: scrapeQuery,
-              scrapeSource: scrapeSource,
-              clientData: scrapedContent,
-              socialsMissing: getMissingSocials(scrapedContent),
-              painPoints: analysisResult.data.painPoints,
-              feedback: "N/A",
-            };
-            setHistory(prev => [newResult, ...prev]);
-            setScrapedData("");
-            setScrapeQuery("");
-            toast({
-              title: "Analysis Complete",
-              description: "Pain points have been identified and added to history.",
-            });
-          } else {
-            toast({
-              title: "Analysis Failed",
-              description: analysisResult.error || "An unknown error occurred.",
-              variant: "destructive",
-            });
-          }
+          description: `${scrapeResult.data.results.length} results found.`,
         });
       } else {
         toast({
@@ -144,8 +117,46 @@ export default function ClientAnalysisPage() {
     });
   };
 
+  const handleAnalyzeResult = (resultId: string) => {
+    const resultToAnalyze = scrapedResults.find(r => r.id === resultId);
+    if (!resultToAnalyze) return;
+
+    setScrapedResults(prev => prev.map(r => r.id === resultId ? { ...r, isAnalyzing: true } : r));
+
+    startAnalyzingTransition(async () => {
+      const analysisResult = await performAnalysis(resultToAnalyze.summary);
+      if (analysisResult.success && analysisResult.data) {
+        const newResult: AnalysisResult = {
+          id: new Date().toISOString(),
+          date: new Date().toLocaleDateString(),
+          scrapedUrl: resultToAnalyze.url,
+          scrapeQuery: scrapeQuery,
+          scrapeSource: scrapeSource,
+          clientData: resultToAnalyze.summary,
+          socialsMissing: getMissingSocials(resultToAnalyze.summary),
+          painPoints: analysisResult.data.painPoints,
+          feedback: "N/A",
+        };
+        setHistory(prev => [newResult, ...prev]);
+        setScrapedResults(prev => prev.filter(r => r.id !== resultId)); // Remove from list
+        toast({
+          title: "Analysis Complete",
+          description: "Pain points have been identified and added to history.",
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: analysisResult.error || "An unknown error occurred.",
+          variant: "destructive",
+        });
+        setScrapedResults(prev => prev.map(r => r.id === resultId ? { ...r, isAnalyzing: false } : r));
+      }
+    });
+  };
+
+
   const handleManualAnalysis = () => {
-    if (!scrapedData.trim()) {
+    if (!manualInput.trim()) {
       toast({
         title: "Input required",
         description: "Please paste some client data to analyze.",
@@ -155,18 +166,18 @@ export default function ClientAnalysisPage() {
     }
 
     startAnalyzingTransition(async () => {
-      const result = await performAnalysis(scrapedData);
+      const result = await performAnalysis(manualInput);
       if (result.success && result.data) {
         const newResult: AnalysisResult = {
           id: new Date().toISOString(),
           date: new Date().toLocaleDateString(),
-          clientData: scrapedData,
-          socialsMissing: getMissingSocials(scrapedData),
+          clientData: manualInput,
+          socialsMissing: getMissingSocials(manualInput),
           painPoints: result.data.painPoints,
           feedback: "N/A",
         };
         setHistory(prev => [newResult, ...prev]);
-        setScrapedData("");
+        setManualInput("");
         toast({
           title: "Analysis Complete",
           description: "Pain points have been identified and added to history.",
@@ -284,23 +295,45 @@ export default function ClientAnalysisPage() {
                         />
                     </div>
                     
-                    <Button onClick={handleScrapeAndAnalyze} disabled={isPending}>
+                    <Button onClick={handleScrape} disabled={isPending}>
                       {isScraping ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Scraping...
                         </>
-                      ) : isAnalyzing ? (
-                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      )
-                      : (
-                        "Scrape & Analyze"
+                      ) : (
+                        "Scrape"
                       )}
                     </Button>
                 </div>
+
+                {scrapedResults.length > 0 && (
+                    <div className="border rounded-lg p-4">
+                        <h3 className="font-semibold mb-2">Scraped Results</h3>
+                        <Accordion type="single" collapsible className="w-full">
+                            {scrapedResults.map((result) => (
+                                <AccordionItem value={result.id} key={result.id}>
+                                    <AccordionTrigger>
+                                        <div className="flex justify-between items-center w-full pr-4">
+                                            <span className="truncate text-left">{result.title}</span>
+                                            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAnalyzeResult(result.id); }} disabled={result.isAnalyzing || isAnalyzing}>
+                                                {result.isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin"/> : "Analyze"}
+                                            </Button>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <p className="text-sm text-muted-foreground mb-2">{result.summary}</p>
+                                        <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                                            {result.url}
+                                        </a>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    </div>
+                )}
+
+
                 <div className="flex items-center gap-4">
                     <Separator className="flex-1" />
                     <span className="text-xs text-muted-foreground">OR</span>
@@ -309,13 +342,13 @@ export default function ClientAnalysisPage() {
                 <Textarea
                   placeholder="Paste client data here..."
                   className="min-h-[150px] text-sm"
-                  value={scrapedData}
-                  onChange={(e) => setScrapedData(e.target.value)}
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
                   disabled={isPending}
                 />
               </CardContent>
               <CardFooter>
-                <Button onClick={handleManualAnalysis} disabled={isPending || !scrapedData.trim()}>
+                <Button onClick={handleManualAnalysis} disabled={isPending || !manualInput.trim()}>
                   {isAnalyzing && !isScraping ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

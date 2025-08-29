@@ -45,6 +45,19 @@ export const ScrapeWebsiteInputSchema = z.object({
 });
 export type ScrapeWebsiteInput = z.infer<typeof ScrapeWebsiteInputSchema>;
 
+export const ScrapedResultSchema = z.object({
+  title: z.string().describe("The title of the scraped result."),
+  url: z.string().url().describe("The URL of the scraped result."),
+  summary: z.string().describe("A brief summary of the result's content."),
+});
+export type ScrapedResult = z.infer<typeof ScrapedResultSchema>;
+
+
+export const ScrapeWebsiteMultiOutputSchema = z.object({
+    results: z.array(ScrapedResultSchema).describe("An array of scraped results, each with a title, url, and summary."),
+});
+export type ScrapeWebsiteMultiOutput = z.infer<typeof ScrapeWebsiteMultiOutputSchema>;
+
 export const ScrapeWebsiteOutputSchema = z.object({
   content: z.string().describe('The text content of the website.'),
 });
