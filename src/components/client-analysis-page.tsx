@@ -254,13 +254,21 @@ export default function ClientAnalysisPage() {
                                             {result.emails && result.emails.length > 0 && (
                                                 <div className="flex items-center gap-2">
                                                     <Mail className="h-4 w-4 text-muted-foreground" />
-                                                    <span>{result.emails.join(", ")}</span>
+                                                    <div className="flex flex-wrap gap-x-2 gap-y-1">
+                                                        {result.emails.map(email => (
+                                                            <a key={email} href={`mailto:${email}`} className="text-primary hover:underline">{email}</a>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                             {result.phoneNumbers && result.phoneNumbers.length > 0 && (
                                                 <div className="flex items-center gap-2">
                                                     <Phone className="h-4 w-4 text-muted-foreground" />
-                                                    <span>{result.phoneNumbers.join(", ")}</span>
+                                                    <div className="flex flex-wrap gap-x-2 gap-y-1">
+                                                        {result.phoneNumbers.map(phone => (
+                                                            <a key={phone} href={`tel:${phone}`} className="text-primary hover:underline">{phone}</a>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                             {result.socialMediaLinks && result.socialMediaLinks.length > 0 && (
@@ -268,7 +276,7 @@ export default function ClientAnalysisPage() {
                                                     <Users className="h-4 w-4 text-muted-foreground" />
                                                     <div className="flex flex-wrap gap-2">
                                                         {result.socialMediaLinks.map(link => (
-                                                            <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(link).hostname}</a>
+                                                            <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(link).hostname.replace('www.','')}</a>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -338,9 +346,9 @@ export default function ClientAnalysisPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-1.5 text-xs">
-                                {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {row.contact.emails.join(', ')}</div>}
-                                {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {row.contact.phoneNumbers.join(', ')}</div>}
-                                {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> {row.contact.socialMediaLinks.map(l => new URL(l).hostname).join(', ')}</div>}
+                                {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>)}</div></div>}
+                                {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
+                                {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
                               </div>
                             </TableCell>
                             <TableCell>
