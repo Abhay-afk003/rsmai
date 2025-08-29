@@ -64,7 +64,6 @@ const scrapeWebsiteFlow = ai.defineFlow(
     name: 'scrapeWebsiteFlow',
     inputSchema: ScrapeWebsiteInputSchema,
     outputSchema: ScrapeWebsiteOutputSchema,
-    tools: [scrapeTool],
   },
   async (input) => {
     // The tool expects a URL. For non-URL based queries, we need to construct one.
@@ -89,7 +88,9 @@ const scrapeWebsiteFlow = ai.defineFlow(
     }
 
     const {output} = await scrapeTool({url, source: input.source, query: input.query});
-    return output!;
+    
+    // Ensure we always return a valid object.
+    return output || { content: `Scraping failed for source "${input.source}" with query "${input.query}". The tool did not return any content.` };
   }
 );
 
