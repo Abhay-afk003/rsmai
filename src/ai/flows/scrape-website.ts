@@ -14,11 +14,14 @@ const scrapeAndExtractPrompt = ai.definePrompt({
     output: { schema: ScrapeWebsiteMultiOutputSchema },
     prompt: `You are an expert data scraper specializing in finding contact information. Your task is to perform a search based on the user's query and source, and then extract key contact details for up to 10 relevant individuals or companies.
 
-    1. Construct the appropriate search URL.
-        - For Reddit, use: https://www.reddit.com/search/?q=\{query\}
-        - For News, use a Google News search: https://www.google.com/search?q=\{query\}&tbm=nws
-        - For Social Media, use a Google search for profiles: https://www.google.com/search?q=\{query\} social media profile
-        - For Web & Public Data, use a standard Google search: https://www.google.com/search?q=\{query\}
+    1. Construct the appropriate search URL based on the source.
+        - For 'website': Use a standard Google search: https://www.google.com/search?q={query}
+        - For 'reddit': Use Reddit's search: https://www.reddit.com/search/?q={query}
+        - For 'news': Use a Google News search: https://www.google.com/search?q={query}&tbm=nws
+        - For 'instagram': Use a Google search: https://www.google.com/search?q=site:instagram.com {query}
+        - For 'facebook': Use a Google search: https://www.google.com/search?q=site:facebook.com {query}
+        - For 'linkedin': Use a Google search for profiles: https://www.google.com/search?q=site:linkedin.com/in/ {query}
+        - For 'youtube': Use a YouTube search: https://www.youtube.com/results?search_query={query}
 
     2. Fetch content from the top search results.
 

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail, Instagram, Facebook, Linkedin, Youtube } from "lucide-react";
 import { performPainPointAnalysis, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from "@/components/ui/textarea";
 
-type ScrapeSource = "website" | "reddit" | "news" | "social";
+type ScrapeSource = ScrapeWebsiteInput["source"];
 
 type AnalysisHistoryItem = {
   id: string;
@@ -32,7 +32,10 @@ const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; i
     website: { label: "ICP Details (Query)", placeholder: "e.g., 'marketing managers in tech startups'", icon: Globe },
     reddit: { label: "Topic/Subreddit", placeholder: "e.g., 'saas founders'", icon: MessageSquare },
     news: { label: "News Articles Query", placeholder: "e.g., 'companies seeking funding'", icon: Newspaper },
-    social: { label: "Social Media Query", placeholder: "e.g., '#startup looking for developers'", icon: Users },
+    instagram: { label: "Instagram Search", placeholder: "e.g., 'fashion influencers'", icon: Instagram },
+    facebook: { label: "Facebook Search", placeholder: "e.g., 'local business owners'", icon: Facebook },
+    linkedin: { label: "LinkedIn Search", placeholder: "e.g., 'software engineers in SF'", icon: Linkedin },
+    youtube: { label: "YouTube Search", placeholder: "e.g., 'tech review channels'", icon: Youtube },
 }
 
 type ScrapedItem = ScrapedResult & { id: string };
@@ -202,7 +205,10 @@ export default function ClientAnalysisPage() {
                                 <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Web & Public Data</div></SelectItem>
                                 <SelectItem value="reddit"><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Reddit</div></SelectItem>
                                 <SelectItem value="news"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" /> News Articles</div></SelectItem>
-                                <SelectItem value="social"><div className="flex items-center gap-2"><Users className="h-4 w-4" /> Social Media</div></SelectItem>
+                                <SelectItem value="linkedin"><div className="flex items-center gap-2"><Linkedin className="h-4 w-4" /> LinkedIn</div></SelectItem>
+                                <SelectItem value="facebook"><div className="flex items-center gap-2"><Facebook className="h-4 w-4" /> Facebook</div></SelectItem>
+                                <SelectItem value="instagram"><div className="flex items-center gap-2"><Instagram className="h-4 w-4" /> Instagram</div></SelectItem>
+                                <SelectItem value="youtube"><div className="flex items-center gap-2"><Youtube className="h-4 w-4" /> YouTube</div></SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
