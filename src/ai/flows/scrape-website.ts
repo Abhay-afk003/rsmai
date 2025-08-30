@@ -14,14 +14,14 @@ const scrapeAndExtractPrompt = ai.definePrompt({
     output: { schema: ScrapeWebsiteMultiOutputSchema },
     prompt: `You are an expert data scraper specializing in finding contact information for sales outreach anywhere in the world. Your task is to perform a targeted global search based on the user's query and source, and then extract key contact details for up to 10 relevant individuals or companies. Prioritize finding emerging creators, small businesses, or people actively looking for help, not just established figures.
 
-    1.  Construct the appropriate search URL based on the source:
-        - For 'website': Use a Google search: https://www.google.com/search?q={query}
-        - For 'reddit': Use Reddit's search: https://www.reddit.com/search/?q={query}
-        - For 'news': Use Google News search: https://www.google.com/search?q={query}&tbm=nws
-        - For 'instagram': Use a Google search targeting Instagram: https://www.google.com/search?q=site:instagram.com {query}
-        - For 'facebook': Use a Google search targeting Facebook: https://www.google.com/search?q=site:facebook.com {query}
-        - For 'linkedin': Use a Google search for profiles: https://www.google.com/search?q=site:linkedin.com/in/ {query}
-        - For 'youtube': Use a YouTube search: https://www.youtube.com/results?search_query={query}
+    1.  Construct the appropriate search URL based on the source and query. If a location is provided, incorporate it into the search query to narrow down the results.
+        - For 'website': Use a Google search: https://www.google.com/search?q={query}{{#if location}} in {{location}}{{/if}}
+        - For 'reddit': Use Reddit's search: https://www.reddit.com/search/?q={query}{{#if location}} {{location}}{{/if}}
+        - For 'news': Use Google News search: https://www.google.com/search?q={query}{{#if location}} in {{location}}{{/if}}&tbm=nws
+        - For 'instagram': Use a Google search targeting Instagram: https://www.google.com/search?q=site:instagram.com {query}{{#if location}} {{location}}{{/if}}
+        - For 'facebook': Use a Google search targeting Facebook: https://www.google.com/search?q=site:facebook.com {query}{{#if location}} {{location}}{{/if}}
+        - For 'linkedin': Use a Google search for profiles: https://www.google.com/search?q=site:linkedin.com/in/ {query}{{#if location}} {{location}}{{/if}}
+        - For 'youtube': Use a YouTube search: https://www.youtube.com/results?search_query={query}{{#if location}} {{location}}{{/if}}
 
     2.  Fetch content from the top search results.
 
@@ -39,6 +39,9 @@ const scrapeAndExtractPrompt = ai.definePrompt({
 
     Source: {{{source}}}
     Query: {{{query}}}
+    {{#if location}}
+    Location: {{{location}}}
+    {{/if}}
     `,
 });
 

@@ -27,6 +27,7 @@ export type AnalyzeClientPainPointsOutput = z.infer<typeof AnalyzeClientPainPoin
 export const ScrapeWebsiteInputSchema = z.object({
   source: z.enum(["website", "reddit", "news", "instagram", "facebook", "linkedin", "youtube"]).describe("The data source to scrape from."),
   query: z.string().describe("The search query or topic to find contacts for."),
+  location: z.string().optional().describe("An optional specific location (city, state, country) to narrow down the search."),
 });
 export type ScrapeWebsiteInput = z.infer<typeof ScrapeWebsiteInputSchema>;
 

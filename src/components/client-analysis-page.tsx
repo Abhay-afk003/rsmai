@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, FileDown, User, Link as LinkIcon, Phone, Mail, Users, Trash2 } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, FileDown, User, Link as LinkIcon, Phone, Mail, Users, Trash2, MapPin } from "lucide-react";
 import { performPainPointAnalysis, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,6 +24,7 @@ type AnalysisHistoryItem = {
   date: string;
   scrapeQuery: string;
   scrapeSource: ScrapeSource;
+  scrapeLocation?: string;
   contact: ScrapedResult;
   isAnalyzingPainPoints?: boolean;
   painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
@@ -43,6 +44,7 @@ type ScrapedItem = ScrapedResult & { id: string };
 
 export default function ClientAnalysisPage() {
   const [scrapeQuery, setScrapeQuery] = useState("");
+  const [scrapeLocation, setScrapeLocation] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
@@ -79,7 +81,11 @@ export default function ClientAnalysisPage() {
     }
 
     setScrapedResults([]);
-    const scrapeInput: ScrapeWebsiteInput = { source: scrapeSource, query: scrapeQuery };
+    const scrapeInput: ScrapeWebsiteInput = { 
+      source: scrapeSource, 
+      query: scrapeQuery,
+      ...(scrapeLocation.trim() && { location: scrapeLocation.trim() })
+    };
 
     startScrapingTransition(async () => {
       const scrapeResult = await performScrape(scrapeInput);
@@ -105,6 +111,7 @@ export default function ClientAnalysisPage() {
       date: new Date().toLocaleDateString(),
       scrapeQuery: scrapeQuery || "N/A",
       scrapeSource: scrapeSource,
+      ...(scrapeLocation.trim() && { scrapeLocation: scrapeLocation.trim() }),
       contact: result,
     };
     setHistory(prev => [newHistoryItem, ...prev]);
@@ -158,12 +165,13 @@ export default function ClientAnalysisPage() {
       toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
       return;
     }
-    const header = "Date,Source,Query,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points,Suggested Service\n";
+    const header = "Date,Source,Query,Location,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points,Suggested Service\n";
     const rows = history.map((row) => {
       const { contact, painPoints } = row;
       const date = row.date;
       const source = row.scrapeSource;
       const query = `"${row.scrapeQuery.replace(/"/g, '""')}"`;
+      const location = `"${row.scrapeLocation ? row.scrapeLocation.replace(/"/g, '""') : ''}"`;
       const name = `"${contact.name || ''}"`;
       const sourceUrl = `"${contact.sourceUrl}"`;
       const summary = `"${(contact.summary || "").replace(/"/g, '""')}"`;
@@ -173,7 +181,7 @@ export default function ClientAnalysisPage() {
       const painPointsStr = `"${(painPoints || []).map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
       const suggestedServicesStr = `"${(painPoints || []).map(p => p.suggestedService).join("; ").replace(/"/g, '""')}"`;
       
-      return [date, source, query, name, sourceUrl, summary, emails, phones, socials, painPointsStr, suggestedServicesStr].join(",");
+      return [date, source, query, location, name, sourceUrl, summary, emails, phones, socials, painPointsStr, suggestedServicesStr].join(",");
     }).join("\n");
 
     const csvContent = header + rows;
@@ -206,6 +214,7 @@ export default function ClientAnalysisPage() {
         const painPointsText = (painPoints || []).map(p => `[${p.category}] ${p.description}\nPitch: ${p.suggestedService}`).join('\n\n');
         const contactInfo = [
             `Query: ${row.scrapeQuery}`,
+            `Location: ${row.scrapeLocation || 'N/A'}`,
             `Source: ${row.scrapeSource}`,
             (contact.emails || []).join(', '),
             (contact.phoneNumbers || []).join(', '),
@@ -261,7 +270,7 @@ export default function ClientAnalysisPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[180px_1fr_1fr_auto] gap-4 items-end">
                     <div className="grid gap-2">
                         <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
                         <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
@@ -291,8 +300,20 @@ export default function ClientAnalysisPage() {
                             disabled={isPending}
                         />
                     </div>
+
+                    <div className="grid gap-2">
+                         <label htmlFor="location-input" className="text-sm font-medium">Location (Optional)</label>
+                         <Input 
+                            id="location-input"
+                            placeholder="e.g., California, USA"
+                            value={scrapeLocation}
+                            onChange={(e) => setScrapeLocation(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
+                            disabled={isPending}
+                        />
+                    </div>
                     
-                    <Button onClick={handleScrape} disabled={isPending} className="w-full md:w-auto">
+                    <Button onClick={handleScrape} disabled={isPending} className="w-full lg:w-auto">
                       {isScraping ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -440,8 +461,9 @@ export default function ClientAnalysisPage() {
                                         </a>
                                     </TooltipContent>
                                 </Tooltip>
-                                <div className="text-xs text-muted-foreground">
-                                    {row.scrapeSource}: <span className="italic">"{row.scrapeQuery}"</span>
+                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                    <MapPin className="h-3 w-3"/>
+                                    <span className="italic">"{row.scrapeQuery}" in {row.scrapeLocation || row.scrapeSource}</span>
                                 </div>
                             </TableCell>
                             <TableCell>
