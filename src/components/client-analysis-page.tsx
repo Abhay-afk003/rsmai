@@ -8,15 +8,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail, Instagram, Facebook, Linkedin, Youtube, FileDown } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, FileDown, User, Link as LinkIcon, Phone, Mail, Users, Trash2 } from "lucide-react";
 import { performPainPointAnalysis, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
 
@@ -47,7 +46,6 @@ export default function ClientAnalysisPage() {
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
-  const [expandedMobile, setExpandedMobile] = useState<Record<string, boolean>>({});
   const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
   const isPending = isScraping || isAnalyzing;
@@ -73,10 +71,6 @@ export default function ClientAnalysisPage() {
         console.error("Failed to save history to sessionStorage", error);
     }
   }, [history]);
-  
-  const toggleMobileExpand = (id: string) => {
-    setExpandedMobile(prev => ({...prev, [id]: !prev[id]}));
-  };
 
   const handleScrape = () => {
     if (!scrapeQuery.trim()) {
@@ -91,10 +85,9 @@ export default function ClientAnalysisPage() {
       const scrapeResult = await performScrape(scrapeInput);
       if (scrapeResult.success && scrapeResult.data) {
         setScrapedResults(scrapeResult.data.results.map(r => ({ ...r, id: new Date().toISOString() + Math.random() })));
-        setScrapeQuery("");
         toast({
           title: "Scraping Complete",
-          description: `${scrapeResult.data.results.length} contacts found.`,
+          description: `${scrapeResult.data.results.length} contacts found. Select which ones to add to your research history.`,
         });
       } else {
         toast({
@@ -110,7 +103,7 @@ export default function ClientAnalysisPage() {
     const newHistoryItem: AnalysisHistoryItem = {
       id: result.id,
       date: new Date().toLocaleDateString(),
-      scrapeQuery: scrapeQuery,
+      scrapeQuery: scrapeQuery || "N/A",
       scrapeSource: scrapeSource,
       contact: result,
     };
@@ -144,12 +137,28 @@ export default function ClientAnalysisPage() {
     });
   };
 
+  const deleteHistoryItem = (id: string) => {
+    setHistory(prev => prev.filter(item => item.id !== id));
+    toast({
+        title: "Contact Removed",
+        description: "The contact has been removed from your research history.",
+    });
+  };
+
+  const clearHistory = () => {
+      setHistory([]);
+      toast({
+          title: "History Cleared",
+          description: "All contacts have been removed from your research history.",
+      });
+  };
+
   const downloadCSV = () => {
     if (history.length === 0) {
       toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
       return;
     }
-    const header = "Date,Source,Query,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points\n";
+    const header = "Date,Source,Query,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points,Suggested Service\n";
     const rows = history.map((row) => {
       const { contact, painPoints } = row;
       const date = row.date;
@@ -162,8 +171,9 @@ export default function ClientAnalysisPage() {
       const phones = `"${(contact.phoneNumbers || []).join(", ")}"`;
       const socials = `"${(contact.socialMediaLinks || []).join(", ")}"`;
       const painPointsStr = `"${(painPoints || []).map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
+      const suggestedServicesStr = `"${(painPoints || []).map(p => p.suggestedService).join("; ").replace(/"/g, '""')}"`;
       
-      return [date, source, query, name, sourceUrl, summary, emails, phones, socials, painPointsStr].join(",");
+      return [date, source, query, name, sourceUrl, summary, emails, phones, socials, painPointsStr, suggestedServicesStr].join(",");
     }).join("\n");
 
     const csvContent = header + rows;
@@ -193,8 +203,10 @@ export default function ClientAnalysisPage() {
 
     const tableData = history.map(row => {
         const { contact, painPoints } = row;
-        const painPointsText = (painPoints || []).map(p => `${p.category}: ${p.description}`).join('\n\n');
+        const painPointsText = (painPoints || []).map(p => `[${p.category}] ${p.description}\nPitch: ${p.suggestedService}`).join('\n\n');
         const contactInfo = [
+            `Query: ${row.scrapeQuery}`,
+            `Source: ${row.scrapeSource}`,
             (contact.emails || []).join(', '),
             (contact.phoneNumbers || []).join(', '),
             (contact.socialMediaLinks || []).join(', '),
@@ -202,26 +214,26 @@ export default function ClientAnalysisPage() {
 
         return [
             row.date,
-            `${contact.name || 'N/A'}\nQuery: ${row.scrapeQuery}`,
+            contact.name || 'N/A',
             contactInfo,
             painPointsText || "Not analyzed yet."
         ];
     });
 
     (doc as any).autoTable({
-        head: [['Date', 'Contact & Query', 'Contact Info', 'Pain Points']],
+        head: [['Date', 'Name', 'Contact Info', 'Pain Point Analysis']],
         body: tableData,
         startY: 35,
         theme: 'striped',
         headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
         columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: 45 },
+            0: { cellWidth: 20 },
+            1: { cellWidth: 35 },
             2: { cellWidth: 45 },
             3: { cellWidth: 'auto' },
         },
         didParseCell: function(data: any) {
-            if (data.column.dataKey === 3) { // Pain points column
+            if (data.column.dataKey === 3) {
                 data.cell.styles.fontStyle = 'italic';
             }
         }
@@ -275,6 +287,7 @@ export default function ClientAnalysisPage() {
                             placeholder={currentSourceConfig.placeholder}
                             value={scrapeQuery}
                             onChange={(e) => setScrapeQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
                             disabled={isPending}
                         />
                     </div>
@@ -374,6 +387,26 @@ export default function ClientAnalysisPage() {
                         <FileDown className="mr-2 h-4 w-4" />
                         Download PDF
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Clear All
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete your entire research history from this session.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={clearHistory}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                 </div>
               </CardHeader>
               <CardContent>
@@ -385,7 +418,8 @@ export default function ClientAnalysisPage() {
                         <TableHead className="w-[100px]">Date</TableHead>
                         <TableHead>Contact</TableHead>
                         <TableHead>Contact Info</TableHead>
-                        <TableHead>Pain Points</TableHead>
+                        <TableHead>Pain Point Analysis</TableHead>
+                        <TableHead className="w-[50px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -406,6 +440,9 @@ export default function ClientAnalysisPage() {
                                         </a>
                                     </TooltipContent>
                                 </Tooltip>
+                                <div className="text-xs text-muted-foreground">
+                                    {row.scrapeSource}: <span className="italic">"{row.scrapeQuery}"</span>
+                                </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-1.5 text-xs">
@@ -421,36 +458,62 @@ export default function ClientAnalysisPage() {
                                   <span>Analyzing...</span>
                                 </div>
                               ) : row.painPoints ? (
-                                <div className="flex gap-1.5 flex-wrap max-w-md">
-                                {row.painPoints.map((p, i) => (
-                                  <Tooltip key={i}>
-                                    <TooltipTrigger>
-                                      <Badge variant="outline" className="cursor-default border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="bg-card border-border p-4 max-w-sm">
-                                      <p className="text-card-foreground whitespace-pre-wrap break-words">{p.description}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ))}
-                               </div>
+                                <Accordion type="single" collapsible className="w-full">
+                                  <AccordionItem value="item-1">
+                                    <AccordionTrigger>
+                                      <div className="flex gap-1.5 flex-wrap max-w-md">
+                                          {row.painPoints.slice(0, 3).map((p, i) => (
+                                              <Badge key={i} variant="outline" className="cursor-pointer border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
+                                          ))}
+                                          {row.painPoints.length > 3 && <Badge variant="secondary">+{row.painPoints.length-3} more</Badge>}
+                                      </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      <div className="space-y-4">
+                                        {row.painPoints.map((p, i) => (
+                                          <div key={i} className="text-xs">
+                                              <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
+                                              <p className="font-semibold text-accent mt-1">Suggested Pitch: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
                               ) : (
-                                <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, row.contact.summary)}>
+                                <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
                                   <Search className="mr-2 h-4 w-4" />
                                   Analyze Pain Points
                                 </Button>
                               )}
                             </TableCell>
+                            <TableCell className="text-right">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <Trash2 className="h-4 w-4 text-destructive/70" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                        This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                            {isAnalyzing ? (
-                                <div className="flex justify-center items-center gap-2 text-muted-foreground">
-                                    <Loader2 className="h-6 w-6 animate-spin" />
-                                    <span>Analyzing...</span>
-                                </div>
-                            ) : "No research history yet."}
+                          <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                            No research history yet. Add a contact to get started.
                           </TableCell>
                         </TableRow>
                       )}
@@ -463,65 +526,84 @@ export default function ClientAnalysisPage() {
                         history.map(row => (
                             <Card key={row.id}>
                                 <CardHeader>
-                                    <CardTitle className="text-base truncate">{row.contact.name || 'Unnamed Contact'}</CardTitle>
-                                    <CardDescription>{row.date}</CardDescription>
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <CardTitle className="text-base truncate">{row.contact.name || 'Unnamed Contact'}</CardTitle>
+                                            <CardDescription>{row.date} via {row.scrapeSource}</CardDescription>
+                                        </div>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
+                                                    <Trash2 className="h-4 w-4 text-destructive/70" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="grid gap-4 text-sm">
-                                    { (isAnalyzing && !row.painPoints && row.isAnalyzingPainPoints) ? (
-                                        <div className="flex items-center justify-center gap-2 text-muted-foreground py-4">
-                                            <Loader2 className="h-5 w-5 animate-spin" />
-                                            <span>Analyzing...</span>
+                                    <div className="flex flex-col gap-2">
+                                        <h4 className="font-semibold">Contact Info</h4>
+                                        <div className="flex flex-col gap-1.5 text-xs">
+                                            {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline break-all">{e}</a>)}</div></div>}
+                                            {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
+                                            {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
                                         </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex flex-col gap-2">
-                                                <h4 className="font-semibold">Contact Info</h4>
-                                                <div className="flex flex-col gap-1.5 text-xs">
-                                                    {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>)}</div></div>}
-                                                    {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
-                                                    {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
-                                                </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <h4 className="font-semibold">Pain Point Analysis</h4>
+                                        {row.isAnalyzingPainPoints ? (
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span>Analyzing...</span>
                                             </div>
-                                            <div className="flex flex-col gap-2">
-                                                <h4 className="font-semibold">Pain Points</h4>
-                                                {row.isAnalyzingPainPoints ? (
-                                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                        <span>Analyzing...</span>
-                                                    </div>
-                                                ) : row.painPoints ? (
-                                                    <div className="flex gap-1.5 flex-wrap">
+                                        ) : row.painPoints ? (
+                                             <Accordion type="single" collapsible className="w-full">
+                                                <AccordionItem value="item-1">
+                                                    <AccordionTrigger>
+                                                        <div className="flex gap-1.5 flex-wrap">
+                                                            {row.painPoints.slice(0, 2).map((p, i) => (
+                                                                <Badge key={i} variant="outline" className="cursor-pointer border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
+                                                            ))}
+                                                            {row.painPoints.length > 2 && <Badge variant="secondary">+{row.painPoints.length-2} more</Badge>}
+                                                        </div>
+                                                    </AccordionTrigger>
+                                                    <AccordionContent>
+                                                    <div className="space-y-4">
                                                         {row.painPoints.map((p, i) => (
-                                                            <Tooltip key={i}>
-                                                                <TooltipTrigger>
-                                                                    <Badge variant="outline" className="cursor-default border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent className="bg-card border-border p-4 max-w-xs">
-                                                                    <p className="text-card-foreground whitespace-pre-wrap break-words">{p.description}</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
+                                                        <div key={i} className="text-xs">
+                                                            <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
+                                                            <p className="font-semibold text-accent mt-1">Suggested Pitch: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
+                                                        </div>
                                                         ))}
                                                     </div>
-                                                ) : (
-                                                    <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, row.contact.summary)}>
-                                                        <Search className="mr-2 h-4 w-4" />
-                                                        Analyze Pain Points
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </>
-                                    )}
+                                                    </AccordionContent>
+                                                </AccordionItem>
+                                            </Accordion>
+                                        ) : (
+                                            <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
+                                                <Search className="mr-2 h-4 w-4" />
+                                                Analyze Pain Points
+                                            </Button>
+                                        )}
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))
                     ) : (
-                        <div className="h-24 text-center text-muted-foreground flex items-center justify-center">
-                            {isAnalyzing ? (
-                                <div className="flex justify-center items-center gap-2 text-muted-foreground">
-                                    <Loader2 className="h-6 w-6 animate-spin" />
-                                    <span>Analyzing...</span>
-                                </div>
-                            ) : "No research history yet."}
+                         <div className="h-24 text-center text-muted-foreground flex items-center justify-center border rounded-md">
+                            No research history yet.
                         </div>
                     )}
                 </div>

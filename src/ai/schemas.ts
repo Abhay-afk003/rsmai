@@ -16,6 +16,7 @@ export const AnalyzeClientPainPointsOutputSchema = z.object({
     z.object({
       category: z.string().describe('The category of the pain point.'),
       description: z.string().describe('A direct, concise description of the pain point that can be used in a conversation.'),
+      suggestedService: z.string().describe('The specific digital marketing service that can be pitched to solve this pain point.')
     })
   ).describe('The identified pain points categorized by category and description.'),
 });

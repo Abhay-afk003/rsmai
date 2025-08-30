@@ -12,7 +12,7 @@ const scrapeAndExtractPrompt = ai.definePrompt({
     name: 'scrapeAndExtract',
     input: { schema: ScrapeWebsiteInputSchema },
     output: { schema: ScrapeWebsiteMultiOutputSchema },
-    prompt: `You are an expert data scraper specializing in finding contact information for sales outreach. Your task is to perform a targeted search based on the user's query and source, and then extract key contact details for up to 10 relevant individuals or companies.
+    prompt: `You are an expert data scraper specializing in finding contact information for sales outreach anywhere in the world. Your task is to perform a targeted global search based on the user's query and source, and then extract key contact details for up to 10 relevant individuals or companies. Prioritize finding emerging creators, small businesses, or people actively looking for help, not just established figures.
 
     1.  Construct the appropriate search URL based on the source:
         - For 'website': Use a Google search: https://www.google.com/search?q={query}
@@ -28,12 +28,12 @@ const scrapeAndExtractPrompt = ai.definePrompt({
     3.  For each distinct and relevant result, aggressively parse the content to extract the following information:
         - 'name': The full name of the person or company.
         - 'sourceUrl': The direct URL where the information was found.
-        - 'summary': A brief, hard-hitting summary of the individual or company, focusing on their professional role and context.
+        - 'summary': A brief, hard-hitting summary of the individual or company, focusing on their professional role, current situation, and online presence.
         - 'socialMediaLinks': Any and all associated social media profile URLs (LinkedIn, Twitter, etc.).
         - 'phoneNumbers': Any contact phone numbers found, from anywhere in the world.
         - 'emails': Any contact email addresses found. Prioritize professional emails, but also extract personal ones like @gmail.com if available.
 
-    4.  If a piece of information (e.g., phone number) is not found, omit the key. Do not fabricate data.
+    4.  If a piece of information (e.g., phone number) is not found, omit the key. Do not fabricate data. Ensure results are diverse and not duplicates.
 
     5.  Format the output as a JSON object that adheres to the ScrapeWebsiteMultiOutputSchema.
 
