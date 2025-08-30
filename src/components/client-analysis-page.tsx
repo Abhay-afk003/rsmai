@@ -242,17 +242,17 @@ export default function ClientAnalysisPage() {
                         <Accordion type="single" collapsible className="w-full">
                             {scrapedResults.map((result) => (
                                 <AccordionItem value={result.id} key={result.id}>
-                                    <AccordionTrigger>
-                                        <div className="flex justify-between items-center w-full pr-4">
+                                    <div className="flex justify-between items-center w-full pr-4 py-1">
+                                        <AccordionTrigger className="flex-1">
                                             <div className="flex items-center gap-2">
                                                 <User className="h-4 w-4" />
                                                 <span className="truncate text-left font-semibold">{result.name || "Unnamed Contact"}</span>
                                             </div>
-                                            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAddToHistory(result); }}>
-                                                Add to History
-                                            </Button>
-                                        </div>
-                                    </AccordionTrigger>
+                                        </AccordionTrigger>
+                                        <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAddToHistory(result); }}>
+                                            Add to History
+                                        </Button>
+                                    </div>
                                     <AccordionContent>
                                         <p className="text-sm text-muted-foreground mb-4">{result.summary}</p>
                                         <div className="grid gap-2 text-xs">
@@ -472,3 +472,5 @@ export default function ClientAnalysisPage() {
     </TooltipProvider>
   );
 }
+
+    
