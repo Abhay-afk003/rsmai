@@ -165,23 +165,28 @@ export default function ClientAnalysisPage() {
       toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
       return;
     }
-    const header = "Date,Source,Query,Location,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points,Plan of Action\n";
-    const rows = history.map((row) => {
+    const header = "COUNT,DATE,CLIENT DETAILS,SOCIALS MISSING,PAIN POINTS,FEEDBACK\n";
+    const rows = history.map((row, index) => {
       const { contact, painPoints } = row;
+      const count = index + 1;
       const date = row.date;
-      const source = row.scrapeSource;
-      const query = `"${row.scrapeQuery.replace(/"/g, '""')}"`;
-      const location = `"${row.scrapeLocation ? row.scrapeLocation.replace(/"/g, '""') : ''}"`;
-      const name = `"${contact.name || ''}"`;
-      const sourceUrl = `"${contact.sourceUrl}"`;
-      const summary = `"${(contact.summary || "").replace(/"/g, '""')}"`;
-      const emails = `"${(contact.emails || []).join(", ")}"`;
-      const phones = `"${(contact.phoneNumbers || []).join(", ")}"`;
-      const socials = `"${(contact.socialMediaLinks || []).join(", ")}"`;
-      const painPointsStr = `"${(painPoints || []).map(p => `${p.category}: ${p.description}`).join("; ").replace(/"/g, '""')}"`;
-      const suggestedServicesStr = `"${(painPoints || []).map(p => p.suggestedService).join("; ").replace(/"/g, '""')}"`;
+      const clientDetails = `"${[
+        `Name: ${contact.name || 'N/A'}`,
+        `Query: ${row.scrapeQuery}`,
+        `Location: ${row.scrapeLocation || 'N/A'}`,
+        `Source: ${row.scrapeSource}`,
+        `Source URL: ${contact.sourceUrl}`,
+        `Summary: ${(contact.summary || "").replace(/"/g, '""')}`,
+        `Emails: ${(contact.emails || []).join(", ")}`,
+        `Phones: ${(contact.phoneNumbers || []).join(", ")}`,
+        `Socials: ${(contact.socialMediaLinks || []).join(", ")}`
+      ].join('\n')}"`;
       
-      return [date, source, query, location, name, sourceUrl, summary, emails, phones, socials, painPointsStr, suggestedServicesStr].join(",");
+      const socialsMissing = `""`; // Placeholder for manual entry
+      const painPointsStr = `"${(painPoints || []).map(p => `[${p.category}] ${p.description}\nPlan: ${p.suggestedService}`).join('\n\n').replace(/"/g, '""')}"`;
+      const feedback = `""`; // Placeholder for manual entry
+
+      return [count, date, clientDetails, socialsMissing, painPointsStr, feedback].join(",");
     }).join("\n");
 
     const csvContent = header + rows;
@@ -189,7 +194,7 @@ export default function ClientAnalysisPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "rsm-contact-analysis.csv");
+    link.setAttribute("download", "market-research-pain-points.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
