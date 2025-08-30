@@ -165,7 +165,7 @@ export default function ClientAnalysisPage() {
       toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
       return;
     }
-    const header = "Date,Source,Query,Location,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points,Suggested Service\n";
+    const header = "Date,Source,Query,Location,Name,Source URL,Summary,Emails,Phone Numbers,Social Media,Pain Points,Plan of Action\n";
     const rows = history.map((row) => {
       const { contact, painPoints } = row;
       const date = row.date;
@@ -211,7 +211,7 @@ export default function ClientAnalysisPage() {
 
     const tableData = history.map(row => {
         const { contact, painPoints } = row;
-        const painPointsText = (painPoints || []).map(p => `[${p.category}] ${p.description}\nPitch: ${p.suggestedService}`).join('\n\n');
+        const painPointsText = (painPoints || []).map(p => `[${p.category}] ${p.description}\nPlan: ${p.suggestedService}`).join('\n\n');
         const contactInfo = [
             `Query: ${row.scrapeQuery}`,
             `Location: ${row.scrapeLocation || 'N/A'}`,
@@ -495,7 +495,7 @@ export default function ClientAnalysisPage() {
                                         {row.painPoints.map((p, i) => (
                                           <div key={i} className="text-xs">
                                               <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
-                                              <p className="font-semibold text-accent mt-1">Suggested Pitch: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
+                                              <p className="font-semibold text-accent mt-1">Plan of Action: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
                                           </div>
                                         ))}
                                       </div>
@@ -606,7 +606,7 @@ export default function ClientAnalysisPage() {
                                                         {row.painPoints.map((p, i) => (
                                                         <div key={i} className="text-xs">
                                                             <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
-                                                            <p className="font-semibold text-accent mt-1">Suggested Pitch: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
+                                                            <p className="font-semibold text-accent mt-1">Plan of Action: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
                                                         </div>
                                                         ))}
                                                     </div>
