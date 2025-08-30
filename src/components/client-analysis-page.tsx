@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from "react";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail, Instagram, Facebook, Linkedin, Youtube } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Users, User, Link as LinkIcon, Phone, Mail, Instagram, Facebook, Linkedin, Youtube, FileDown } from "lucide-react";
 import { performPainPointAnalysis, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -174,6 +176,59 @@ export default function ClientAnalysisPage() {
     link.click();
     document.body.removeChild(link);
   };
+  
+  const downloadPDF = () => {
+    if (history.length === 0) {
+        toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
+        return;
+    }
+
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("RSM Insights AI - Research History", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Report generated on ${new Date().toLocaleDateString()}`, 14, 29);
+
+    const tableData = history.map(row => {
+        const { contact, painPoints } = row;
+        const painPointsText = (painPoints || []).map(p => `${p.category}: ${p.description}`).join('\n\n');
+        const contactInfo = [
+            (contact.emails || []).join(', '),
+            (contact.phoneNumbers || []).join(', '),
+            (contact.socialMediaLinks || []).join(', '),
+        ].filter(Boolean).join('\n');
+
+        return [
+            row.date,
+            `${contact.name || 'N/A'}\nQuery: ${row.scrapeQuery}`,
+            contactInfo,
+            painPointsText || "Not analyzed yet."
+        ];
+    });
+
+    (doc as any).autoTable({
+        head: [['Date', 'Contact & Query', 'Contact Info', 'Pain Points']],
+        body: tableData,
+        startY: 35,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 45 },
+            3: { cellWidth: 'auto' },
+        },
+        didParseCell: function(data: any) {
+            if (data.column.dataKey === 3) { // Pain points column
+                data.cell.styles.fontStyle = 'italic';
+            }
+        }
+    });
+
+    doc.save('rsm-contact-analysis.pdf');
+  };
 
   const currentSourceConfig = sourceConfig[scrapeSource];
 
@@ -310,10 +365,16 @@ export default function ClientAnalysisPage() {
                     A log of all your scraped contacts. Results are saved in your browser session.
                   </CardDescription>
                 </div>
-                <Button onClick={downloadCSV} variant="outline" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download CSV
-                </Button>
+                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Button onClick={downloadCSV} variant="outline" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download CSV
+                    </Button>
+                    <Button onClick={downloadPDF} variant="outline" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Download PDF
+                    </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {/* Desktop Table */}
