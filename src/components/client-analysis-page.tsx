@@ -29,8 +29,8 @@ type AnalysisHistoryItem = {
 };
 
 const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; icon: React.ElementType }> = {
-    website: { label: "ICP Details (Query)", placeholder: "e.g., 'marketing managers in tech startups'", icon: Globe },
-    reddit: { label: "Topic/Subreddit", placeholder: "e.g., 'saas founders'", icon: MessageSquare },
+    website: { label: "Web & Public Data", placeholder: "e.g., 'marketing managers in tech startups'", icon: Globe },
+    reddit: { label: "Reddit Topic/Subreddit", placeholder: "e.g., 'saas founders'", icon: MessageSquare },
     news: { label: "News Articles Query", placeholder: "e.g., 'companies seeking funding'", icon: Newspaper },
     instagram: { label: "Instagram Search", placeholder: "e.g., 'fashion influencers'", icon: Instagram },
     facebook: { label: "Facebook Search", placeholder: "e.g., 'local business owners'", icon: Facebook },
@@ -472,5 +472,3 @@ export default function ClientAnalysisPage() {
     </TooltipProvider>
   );
 }
-
-    
