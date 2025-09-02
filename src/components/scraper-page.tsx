@@ -4,7 +4,7 @@ import React, { useState, useTransition, useEffect } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, ArrowRight, Download, Search, MapPin, Trash2, FileDown, MessageCircle } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
@@ -94,7 +94,7 @@ export default function ScraperPage() {
     startScrapingTransition(async () => {
       const scrapeResult = await performScrape(scrapeInput);
       if (scrapeResult.success && scrapeResult.data) {
-        setScrapedResults(scrapeResult.data.results.map((r) => ({ ...r, id: `${Date.now()}-${r.sourceUrl}` })));
+        setScrapedResults(scrapeResult.data.results.map((r) => ({ ...r, id: `${Date.now()}-${Math.random()}-${r.sourceUrl}` })));
         toast({
           title: "Scraping Complete",
           description: `${scrapeResult.data.results.length} contacts found. Select which ones to add to your research.`,
@@ -110,7 +110,7 @@ export default function ScraperPage() {
   };
 
   const handleAddToHistory = (resultToAdd: ScrapedItem) => {
-    if (history.some(item => item.id === resultToAdd.id)) {
+    if (history.some(item => item.contact.sourceUrl === resultToAdd.sourceUrl)) {
         toast({
             title: "Duplicate",
             description: "This contact is already in your research history.",
@@ -470,7 +470,7 @@ export default function ScraperPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[60px]">COUNT</TableHead>
+                        <TableHead className="w-[60px] text-center">COUNT</TableHead>
                         <TableHead className="w-[100px]">DATE</TableHead>
                         <TableHead>CLIENT DETAILS</TableHead>
                         <TableHead className="w-[150px]">SOCIALS MISSING</TableHead>
@@ -483,31 +483,33 @@ export default function ScraperPage() {
                       {history.length > 0 ? (
                         history.map((row, index) => (
                           <TableRow key={row.id}>
-                            <TableCell>{index + 1}</TableCell>
+                            <TableCell className="text-center">{index + 1}</TableCell>
                             <TableCell>{row.date}</TableCell>
-                            <TableCell className="max-w-xs">
-                                <div className="font-semibold">{row.contact.name || 'Unnamed Contact'}</div>
-                                <p className="text-xs text-muted-foreground line-clamp-2 my-1">{row.contact.summary}</p>
-                                <div className="text-xs space-y-1">
-                                    <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails?.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>) || 'N/A'}</div></div>
-                                    <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers?.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>) || 'N/A'}</div></div>
-                                    <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks?.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>) || 'N/A'}</div></div>
-                                    <div className="flex items-center gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
+                            <TableCell className="max-w-xs align-top">
+                                <div className="font-semibold text-base">{row.contact.name || 'Unnamed Contact'}</div>
+                                <p className="text-xs text-muted-foreground line-clamp-3 my-2">{row.contact.summary}</p>
+                                <div className="text-xs space-y-1.5 mt-2">
+                                    <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails?.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers?.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks?.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-center gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
                                 </div>
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground italic">Placeholder</TableCell>
-                            <TableCell>
+                            <TableCell className="text-xs text-muted-foreground italic align-top">Placeholder</TableCell>
+                            <TableCell className="align-top">
                               {row.isAnalyzingPainPoints ? (
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                   <span>Analyzing...</span>
                                 </div>
                               ) : row.painPoints ? (
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {row.painPoints.map((p, i) => (
-                                      <div key={i} className="text-xs p-2 bg-muted/50 rounded-md">
-                                          <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
-                                          <p className="font-semibold text-accent mt-1">Plan: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
+                                      <div key={i} className="text-xs">
+                                          <p className="font-semibold text-primary">{p.category}</p>
+                                          <p className="text-foreground mt-0.5">{p.description}</p>
+                                          <p className="font-semibold text-accent mt-1.5">Plan:</p>
+                                          <p className="text-foreground mt-0.5">{p.suggestedService}</p>
                                       </div>
                                     ))}
                                 </div>
@@ -518,8 +520,8 @@ export default function ScraperPage() {
                                 </Button>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground italic">Placeholder</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-xs text-muted-foreground italic align-top">Placeholder</TableCell>
+                            <TableCell className="text-right align-top">
                                 <div className="flex flex-col gap-1.5 justify-end items-end">
                                     {row.painPoints && (
                                         <Button variant="ghost" size="sm" onClick={() => handleCraftReply(row)} className="w-full justify-start">
@@ -568,5 +570,3 @@ export default function ScraperPage() {
     </TooltipProvider>
   );
 }
-
-    
