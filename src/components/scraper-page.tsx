@@ -4,9 +4,9 @@ import React, { useState, useTransition, useEffect } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, ArrowRight, Download, Search, MapPin, Trash2, FileDown, MessageCircle } from "lucide-react";
+import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, ArrowRight, Download, Search, MapPin, Trash2, FileDown, MessageCircle, Twitter } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
 import type { ScrapeWebsiteInput, ScrapedResult, AnalyzeClientPainPointsOutput } from "@/ai/schemas";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
@@ -41,9 +42,18 @@ export type AnalysisHistoryItem = {
     contact: ScrapedResult;
     isAnalyzingPainPoints?: boolean;
     painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
+    feedback?: string;
 };
 
 type ScrapedItem = ScrapedResult & { id: string };
+
+const SOCIALS_TO_CHECK: Record<string, React.ElementType> = {
+    linkedin: Linkedin,
+    twitter: Twitter,
+    instagram: Instagram,
+    facebook: Facebook,
+    youtube: Youtube,
+};
 
 export default function ScraperPage() {
   const [scrapeQuery, setScrapeQuery] = useState("");
@@ -126,6 +136,7 @@ export default function ScraperPage() {
       scrapeSource: scrapeSource,
       ...(scrapeLocation.trim() && { scrapeLocation: scrapeLocation.trim() }),
       contact: resultToAdd,
+      feedback: "",
     };
   
     setHistory(prev => [newHistoryItem, ...prev]);
@@ -173,6 +184,11 @@ export default function ScraperPage() {
           description: "All contacts have been removed from your research history.",
       });
   };
+  
+  const handleFeedbackChange = (id: string, newFeedback: string) => {
+    setHistory(prev => prev.map(item => item.id === id ? { ...item, feedback: newFeedback } : item));
+  };
+
 
   const downloadCSV = () => {
     if (history.length === 0) {
@@ -196,9 +212,25 @@ export default function ScraperPage() {
         `Socials: ${(contact.socialMediaLinks || []).join(", ")}`
       ].join('\n')}"`;
       
-      const socialsMissing = `""`; // Placeholder for manual entry
+      const foundSocials = new Set((contact.socialMediaLinks || []).map(link => {
+        try {
+            const hostname = new URL(link).hostname.toLowerCase();
+            if (hostname.includes('linkedin')) return 'linkedin';
+            if (hostname.includes('twitter') || hostname.includes('x.com')) return 'twitter';
+            if (hostname.includes('instagram')) return 'instagram';
+            if (hostname.includes('facebook')) return 'facebook';
+            if (hostname.includes('youtube')) return 'youtube';
+        } catch {
+            return null;
+        }
+        return null;
+      }).filter(Boolean));
+
+      const missingSocials = Object.keys(SOCIALS_TO_CHECK).filter(s => !foundSocials.has(s)).join(', ');
+
+      const socialsMissing = `"${missingSocials || 'None'}"`;
       const painPointsStr = `"${(painPoints || []).map(p => `[${p.category}] ${p.description}\nPlan: ${p.suggestedService}`).join('\n\n').replace(/"/g, '""')}"`;
-      const feedback = `""`; // Placeholder for manual entry
+      const feedback = `"${(row.feedback || '').replace(/"/g, '""')}"`;
 
       return [count, date, clientDetails, socialsMissing, painPointsStr, feedback].join(",");
     }).join("\n");
@@ -481,7 +513,23 @@ export default function ScraperPage() {
                     </TableHeader>
                     <TableBody>
                       {history.length > 0 ? (
-                        history.map((row, index) => (
+                        history.map((row, index) => {
+                           const foundSocials = new Set((row.contact.socialMediaLinks || []).map(link => {
+                                try {
+                                    const hostname = new URL(link).hostname.toLowerCase();
+                                    if (hostname.includes('linkedin')) return 'linkedin';
+                                    if (hostname.includes('twitter') || hostname.includes('x.com')) return 'twitter';
+                                    if (hostname.includes('instagram')) return 'instagram';
+                                    if (hostname.includes('facebook')) return 'facebook';
+                                    if (hostname.includes('youtube')) return 'youtube';
+                                } catch { return null; }
+                                return null;
+                            }).filter(Boolean));
+
+                            const missingSocials = Object.entries(SOCIALS_TO_CHECK).filter(([key]) => !foundSocials.has(key as string));
+
+
+                           return (
                           <TableRow key={row.id}>
                             <TableCell className="text-center">{index + 1}</TableCell>
                             <TableCell>{row.date}</TableCell>
@@ -495,7 +543,24 @@ export default function ScraperPage() {
                                     <div className="flex items-center gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
                                 </div>
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground italic align-top">Placeholder</TableCell>
+                            <TableCell className="align-top">
+                                {missingSocials.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {missingSocials.map(([key, Icon]) => (
+                                            <Tooltip key={key}>
+                                                <TooltipTrigger>
+                                                    <Icon className="h-4 w-4 text-muted-foreground" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Missing {key.charAt(0).toUpperCase() + key.slice(1)}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <span className="text-xs text-muted-foreground italic">None</span>
+                                )}
+                            </TableCell>
                             <TableCell className="align-top">
                               {row.isAnalyzingPainPoints ? (
                                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -520,7 +585,14 @@ export default function ScraperPage() {
                                 </Button>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground italic align-top">Placeholder</TableCell>
+                            <TableCell className="align-top">
+                                <Textarea 
+                                    placeholder="Log feedback, replies..."
+                                    className="text-xs h-24"
+                                    value={row.feedback}
+                                    onChange={(e) => handleFeedbackChange(row.id, e.target.value)}
+                                />
+                            </TableCell>
                             <TableCell className="text-right align-top">
                                 <div className="flex flex-col gap-1.5 justify-end items-end">
                                     {row.painPoints && (
@@ -552,7 +624,7 @@ export default function ScraperPage() {
                                 </div>
                             </TableCell>
                           </TableRow>
-                        ))
+                        )})}
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">

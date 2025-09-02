@@ -6,7 +6,7 @@ import { Loader2, Mail, MessageSquare, Copy, BrainCircuit, X } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { performCraftReply } from '@/app/actions';
 import { Textarea } from './ui/textarea';
-import type { AnalysisHistoryItem } from './market-research-page';
+import type { AnalysisHistoryItem } from './scraper-page';
 import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
@@ -103,8 +103,8 @@ export default function ReplyCrafter() {
             {!activeContact ? (
                 <div className="flex-1 flex items-center justify-center text-center">
                     <div className="flex flex-col items-center gap-4">
-                        <p className="text-muted-foreground">Select a contact from the Market Research page to start crafting replies.</p>
-                        <Button onClick={() => router.push('/market-research')}>Go to Market Research</Button>
+                        <p className="text-muted-foreground">Select a contact from the Prospecting & Research page to start crafting replies.</p>
+                        <Button onClick={() => router.push('/')}>Go to Prospecting & Research</Button>
                     </div>
                 </div>
             ) : (
@@ -197,3 +197,5 @@ export default function ReplyCrafter() {
       </div>
   );
 }
+
+    
