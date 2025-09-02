@@ -4,7 +4,7 @@ import React, { useState, useTransition, useEffect } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, ArrowRight, Download, Search, MapPin, Trash2, FileDown, MessageCircle } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
@@ -110,18 +110,7 @@ export default function ScraperPage() {
   };
 
   const handleAddToHistory = (resultToAdd: ScrapedItem) => {
-    let currentHistory: AnalysisHistoryItem[] = [];
-    try {
-        const storedHistory = sessionStorage.getItem("analysisHistory");
-        if (storedHistory) {
-            currentHistory = JSON.parse(storedHistory);
-        }
-    } catch (error) {
-        console.error("Failed to parse history, starting fresh.", error);
-        currentHistory = [];
-    }
-    
-    if (currentHistory.some(item => item.id === resultToAdd.id)) {
+    if (history.some(item => item.id === resultToAdd.id)) {
         toast({
             title: "Duplicate",
             description: "This contact is already in your research history.",
@@ -129,7 +118,7 @@ export default function ScraperPage() {
         });
         return;
     }
-
+  
     const newHistoryItem: AnalysisHistoryItem = {
       id: resultToAdd.id,
       date: new Date().toLocaleDateString(),
@@ -138,19 +127,13 @@ export default function ScraperPage() {
       ...(scrapeLocation.trim() && { scrapeLocation: scrapeLocation.trim() }),
       contact: resultToAdd,
     };
-
-    const updatedHistory = [newHistoryItem, ...currentHistory];
-
-    try {
-        setHistory(updatedHistory);
-        setScrapedResults(prev => prev.filter(r => r.id !== resultToAdd.id));
-        toast({
-            title: "Contact Added",
-            description: `${resultToAdd.name || 'Unnamed contact'} has been added to Market Research.`,
-        });
-    } catch (error) {
-        toast({ title: "Error", description: "Could not save to research history.", variant: "destructive"});
-    }
+  
+    setHistory(prev => [newHistoryItem, ...prev]);
+    setScrapedResults(prev => prev.filter(r => r.id !== resultToAdd.id));
+    toast({
+        title: "Contact Added",
+        description: `${resultToAdd.name || 'Unnamed contact'} has been added to your research.`,
+    });
   };
 
   const handlePainPointAnalysis = (id: string, clientData: string) => {
