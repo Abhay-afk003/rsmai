@@ -94,7 +94,7 @@ export default function ScraperPage() {
     startScrapingTransition(async () => {
       const scrapeResult = await performScrape(scrapeInput);
       if (scrapeResult.success && scrapeResult.data) {
-        setScrapedResults(scrapeResult.data.results.map((r, index) => ({ ...r, id: `${Date.now()}-${index}` })));
+        setScrapedResults(scrapeResult.data.results.map((r) => ({ ...r, id: `${Date.now()}-${r.sourceUrl}` })));
         toast({
           title: "Scraping Complete",
           description: `${scrapeResult.data.results.length} contacts found. Select which ones to add to your research.`,
@@ -283,147 +283,153 @@ export default function ScraperPage() {
     <div className="flex flex-col h-full">
       <header className="px-4 lg:px-6 h-14 flex items-center border-b shrink-0">
         <BrainCircuit className="h-6 w-6 text-primary" />
-        <h1 className="ml-2 text-lg font-semibold">Prospecting</h1>
+        <h1 className="ml-2 text-lg font-semibold">Prospecting & Research</h1>
       </header>
 
       <main className="flex-1 p-4 md:p-8 lg:p-12 space-y-8 overflow-y-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Scraping</CardTitle>
-            <CardDescription>
-              Scrape contact details from various sources based on your Ideal Customer Profile (ICP).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[180px_1fr_1fr_auto] gap-4 items-end">
-                <div className="grid gap-2">
-                    <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
-                    <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
-                        <SelectTrigger id="scrape-source">
-                            <SelectValue placeholder="Select source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Web & Public Data</div></SelectItem>
-                            <SelectItem value="reddit"><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Reddit</div></SelectItem>
-                            <SelectItem value="news"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" /> News Articles</div></SelectItem>
-                            <SelectItem value="linkedin"><div className="flex items-center gap-2"><Linkedin className="h-4 w-4" /> LinkedIn</div></SelectItem>
-                            <SelectItem value="facebook"><div className="flex items-center gap-2"><Facebook className="h-4 w-4" /> Facebook</div></SelectItem>
-                            <SelectItem value="instagram"><div className="flex items-center gap-2"><Instagram className="h-4 w-4" /> Instagram</div></SelectItem>
-                            <SelectItem value="youtube"><div className="flex items-center gap-2"><Youtube className="h-4 w-4" /> YouTube</div></SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+        <Accordion type="single" collapsible defaultValue="item-1">
+            <AccordionItem value="item-1">
+                <AccordionTrigger>
+                    <div className="flex flex-col items-start">
+                        <h2 className="text-lg font-semibold">Contact Scraping</h2>
+                        <p className="text-sm text-muted-foreground">Scrape contact details based on your Ideal Customer Profile (ICP).</p>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <Card className="border-none shadow-none">
+                      <CardContent className="grid gap-6 pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[180px_1fr_1fr_auto] gap-4 items-end">
+                            <div className="grid gap-2">
+                                <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
+                                <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
+                                    <SelectTrigger id="scrape-source">
+                                        <SelectValue placeholder="Select source" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Web & Public Data</div></SelectItem>
+                                        <SelectItem value="reddit"><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Reddit</div></SelectItem>
+                                        <SelectItem value="news"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" /> News Articles</div></SelectItem>
+                                        <SelectItem value="linkedin"><div className="flex items-center gap-2"><Linkedin className="h-4 w-4" /> LinkedIn</div></SelectItem>
+                                        <SelectItem value="facebook"><div className="flex items-center gap-2"><Facebook className="h-4 w-4" /> Facebook</div></SelectItem>
+                                        <SelectItem value="instagram"><div className="flex items-center gap-2"><Instagram className="h-4 w-4" /> Instagram</div></SelectItem>
+                                        <SelectItem value="youtube"><div className="flex items-center gap-2"><Youtube className="h-4 w-4" /> YouTube</div></SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                <div className="grid gap-2">
-                    <label htmlFor="query-input" className="text-sm font-medium">{currentSourceConfig.label}</label>
-                    <Input 
-                        id="query-input"
-                        placeholder={currentSourceConfig.placeholder}
-                        value={scrapeQuery}
-                        onChange={(e) => setScrapeQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
-                        disabled={isPending}
-                    />
-                </div>
+                            <div className="grid gap-2">
+                                <label htmlFor="query-input" className="text-sm font-medium">{currentSourceConfig.label}</label>
+                                <Input 
+                                    id="query-input"
+                                    placeholder={currentSourceConfig.placeholder}
+                                    value={scrapeQuery}
+                                    onChange={(e) => setScrapeQuery(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
+                                    disabled={isPending}
+                                />
+                            </div>
 
-                <div className="grid gap-2">
-                    <label htmlFor="location-input" className="text-sm font-medium">Location (Optional)</label>
-                    <Input 
-                        id="location-input"
-                        placeholder="e.g., California, USA"
-                        value={scrapeLocation}
-                        onChange={(e) => setScrapeLocation(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
-                        disabled={isPending}
-                    />
-                </div>
-                
-                <Button onClick={handleScrape} disabled={isScraping} className="w-full lg:w-auto">
-                  {isScraping ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Scraping...
-                    </>
-                  ) : (
-                    "Scrape Contacts"
-                  )}
-                </Button>
-            </div>
+                            <div className="grid gap-2">
+                                <label htmlFor="location-input" className="text-sm font-medium">Location (Optional)</label>
+                                <Input 
+                                    id="location-input"
+                                    placeholder="e.g., California, USA"
+                                    value={scrapeLocation}
+                                    onChange={(e) => setScrapeLocation(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
+                                    disabled={isPending}
+                                />
+                            </div>
+                            
+                            <Button onClick={handleScrape} disabled={isScraping} className="w-full lg:w-auto">
+                              {isScraping ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Scraping...
+                                </>
+                              ) : (
+                                "Scrape Contacts"
+                              )}
+                            </Button>
+                        </div>
 
-            {scrapedResults.length > 0 && (
-                <div className="border rounded-lg p-4">
-                    <h3 className="font-semibold mb-2">Scraped Contacts ({scrapedResults.length} found)</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Select contacts to add them to your research history below.</p>
-                    <ScrollArea className="h-72">
-                      <Accordion type="single" collapsible className="w-full pr-4">
-                          {scrapedResults.map((result) => (
-                              <AccordionItem value={result.id} key={result.id}>
-                                  <div className="flex justify-between items-center w-full py-1">
-                                      <AccordionTrigger className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                              <User className="h-4 w-4" />
-                                              <span className="truncate text-left font-semibold">{result.name || "Unnamed Contact"}</span>
-                                          </div>
-                                      </AccordionTrigger>
-                                      <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAddToHistory(result); }}>
-                                          Add to Research
-                                      </Button>
-                                  </div>
-                                  <AccordionContent>
-                                      <p className="text-sm text-muted-foreground mb-4">{result.summary}</p>
-                                      <div className="grid gap-2 text-xs">
-                                          <div className="flex items-center gap-2">
-                                              <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                                              <a href={result.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
-                                                  {result.sourceUrl}
-                                              </a>
-                                          </div>
-                                          {result.emails && result.emails.length > 0 && (
-                                              <div className="flex items-center gap-2">
-                                                  <Mail className="h-4 w-4 text-muted-foreground" />
-                                                  <div className="flex flex-wrap gap-x-2 gap-y-1">
-                                                      {result.emails.map(email => (
-                                                          <a key={email} href={`mailto:${email}`} className="text-primary hover:underline">{email}</a>
-                                                      ))}
-                                                  </div>
+                        {scrapedResults.length > 0 && (
+                            <div className="border rounded-lg p-4">
+                                <h3 className="font-semibold mb-2">Scraped Contacts ({scrapedResults.length} found)</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Select contacts to add them to your research history below.</p>
+                                <ScrollArea className="h-72">
+                                  <Accordion type="single" collapsible className="w-full pr-4">
+                                      {scrapedResults.map((result) => (
+                                          <AccordionItem value={result.id} key={result.id}>
+                                              <div className="flex justify-between items-center w-full py-1">
+                                                  <AccordionTrigger className="flex-1">
+                                                      <div className="flex items-center gap-2">
+                                                          <User className="h-4 w-4" />
+                                                          <span className="truncate text-left font-semibold">{result.name || "Unnamed Contact"}</span>
+                                                      </div>
+                                                  </AccordionTrigger>
+                                                  <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAddToHistory(result); }}>
+                                                      Add to Research
+                                                  </Button>
                                               </div>
-                                          )}
-                                          {result.phoneNumbers && result.phoneNumbers.length > 0 && (
-                                              <div className="flex items-center gap-2">
-                                                  <Phone className="h-4 w-4 text-muted-foreground" />
-                                                  <div className="flex flex-wrap gap-x-2 gap-y-1">
-                                                      {result.phoneNumbers.map(phone => (
-                                                          <a key={phone} href={`tel:${phone}`} className="text-primary hover:underline">{phone}</a>
-                                                      ))}
+                                              <AccordionContent>
+                                                  <p className="text-sm text-muted-foreground mb-4">{result.summary}</p>
+                                                  <div className="grid gap-2 text-xs">
+                                                      <div className="flex items-center gap-2">
+                                                          <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                                          <a href={result.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                                                              {result.sourceUrl}
+                                                          </a>
+                                                      </div>
+                                                      {result.emails && result.emails.length > 0 && (
+                                                          <div className="flex items-center gap-2">
+                                                              <Mail className="h-4 w-4 text-muted-foreground" />
+                                                              <div className="flex flex-wrap gap-x-2 gap-y-1">
+                                                                  {result.emails.map(email => (
+                                                                      <a key={email} href={`mailto:${email}`} className="text-primary hover:underline">{email}</a>
+                                                                  ))}
+                                                              </div>
+                                                          </div>
+                                                      )}
+                                                      {result.phoneNumbers && result.phoneNumbers.length > 0 && (
+                                                          <div className="flex items-center gap-2">
+                                                              <Phone className="h-4 w-4 text-muted-foreground" />
+                                                              <div className="flex flex-wrap gap-x-2 gap-y-1">
+                                                                  {result.phoneNumbers.map(phone => (
+                                                                      <a key={phone} href={`tel:${phone}`} className="text-primary hover:underline">{phone}</a>
+                                                                  ))}
+                                                              </div>
+                                                          </div>
+                                                      )}
+                                                      {result.socialMediaLinks && result.socialMediaLinks.length > 0 && (
+                                                          <div className="flex items-center gap-2">
+                                                              <Users className="h-4 w-4 text-muted-foreground" />
+                                                              <div className="flex flex-wrap gap-2">
+                                                                  {result.socialMediaLinks.map(link => (
+                                                                      <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(link).hostname.replace('www.','')}</a>
+                                                                  ))}
+                                                              </div>
+                                                          </div>
+                                                      )}
                                                   </div>
-                                              </div>
-                                          )}
-                                          {result.socialMediaLinks && result.socialMediaLinks.length > 0 && (
-                                              <div className="flex items-center gap-2">
-                                                  <Users className="h-4 w-4 text-muted-foreground" />
-                                                  <div className="flex flex-wrap gap-2">
-                                                      {result.socialMediaLinks.map(link => (
-                                                          <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(link).hostname.replace('www.','')}</a>
-                                                      ))}
-                                                  </div>
-                                              </div>
-                                          )}
-                                      </div>
-                                  </AccordionContent>
-                              </AccordionItem>
-                          ))}
-                      </Accordion>
-                    </ScrollArea>
-                </div>
-            )}
-            
-          </CardContent>
-        </Card>
+                                              </AccordionContent>
+                                          </AccordionItem>
+                                      ))}
+                                  </Accordion>
+                                </ScrollArea>
+                            </div>
+                        )}
+                        
+                      </CardContent>
+                    </Card>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
 
         <Card>
               <CardHeader className="flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex-1">
-                  <CardTitle>Research History</CardTitle>
+                  <CardTitle>Market Research Pain Points</CardTitle>
                   <CardDescription>
                     A log of all your scraped contacts. Results are saved in your browser session.
                   </CardDescription>
@@ -460,48 +466,36 @@ export default function ScraperPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Desktop Table */}
-                <div className="border rounded-md hidden md:block">
+                <div className="border rounded-md">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[100px]">Date</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Contact Info</TableHead>
-                        <TableHead>Pain Point Analysis</TableHead>
-                        <TableHead className="w-[50px] text-right">Actions</TableHead>
+                        <TableHead className="w-[60px]">COUNT</TableHead>
+                        <TableHead className="w-[100px]">DATE</TableHead>
+                        <TableHead>CLIENT DETAILS</TableHead>
+                        <TableHead className="w-[150px]">SOCIALS MISSING</TableHead>
+                        <TableHead>PAIN POINTS</TableHead>
+                        <TableHead className="w-[150px]">FEEDBACK</TableHead>
+                        <TableHead className="w-[120px] text-right">ACTIONS</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {history.length > 0 ? (
-                        history.map((row) => (
+                        history.map((row, index) => (
                           <TableRow key={row.id}>
+                            <TableCell>{index + 1}</TableCell>
                             <TableCell>{row.date}</TableCell>
                             <TableCell className="max-w-xs">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className="font-semibold cursor-pointer hover:underline truncate">{row.contact.name || 'Unnamed Contact'}</div>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-md bg-card border-border p-4">
-                                        <p className="font-bold mb-2">{row.contact.name}</p>
-                                        <p className="text-card-foreground whitespace-pre-wrap break-words">{row.contact.summary}</p>
-                                        <a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-2 block truncate">
-                                            Source: {row.contact.sourceUrl}
-                                        </a>
-                                    </TooltipContent>
-                                </Tooltip>
-                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                    <MapPin className="h-3 w-3"/>
-                                    <span className="italic">"{row.scrapeQuery}" in {row.scrapeLocation || row.scrapeSource}</span>
+                                <div className="font-semibold">{row.contact.name || 'Unnamed Contact'}</div>
+                                <p className="text-xs text-muted-foreground line-clamp-2 my-1">{row.contact.summary}</p>
+                                <div className="text-xs space-y-1">
+                                    <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails?.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>) || 'N/A'}</div></div>
+                                    <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers?.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>) || 'N/A'}</div></div>
+                                    <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks?.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>) || 'N/A'}</div></div>
+                                    <div className="flex items-center gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
                                 </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1.5 text-xs">
-                                {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>)}</div></div>}
-                                {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
-                                {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
-                              </div>
-                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground italic">Placeholder</TableCell>
                             <TableCell>
                               {row.isAnalyzingPainPoints ? (
                                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -509,53 +503,35 @@ export default function ScraperPage() {
                                   <span>Analyzing...</span>
                                 </div>
                               ) : row.painPoints ? (
-                                <Accordion type="single" collapsible className="w-full">
-                                  <AccordionItem value="item-1">
-                                    <AccordionTrigger>
-                                      <div className="flex gap-1.5 flex-wrap max-w-md">
-                                          {row.painPoints.slice(0, 3).map((p, i) => (
-                                              <Badge key={i} variant="outline" className="cursor-pointer border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
-                                          ))}
-                                          {row.painPoints.length > 3 && <Badge variant="secondary">+{row.painPoints.length-3} more</Badge>}
+                                <div className="space-y-2">
+                                    {row.painPoints.map((p, i) => (
+                                      <div key={i} className="text-xs p-2 bg-muted/50 rounded-md">
+                                          <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
+                                          <p className="font-semibold text-accent mt-1">Plan: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
                                       </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                      <div className="space-y-4">
-                                        {row.painPoints.map((p, i) => (
-                                          <div key={i} className="text-xs">
-                                              <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
-                                              <p className="font-semibold text-accent mt-1">Plan of Action: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </AccordionContent>
-                                  </AccordionItem>
-                                </Accordion>
+                                    ))}
+                                </div>
                               ) : (
                                 <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
                                   <Search className="mr-2 h-4 w-4" />
-                                  Analyze Pain Points
+                                  Analyze
                                 </Button>
                               )}
                             </TableCell>
+                            <TableCell className="text-xs text-muted-foreground italic">Placeholder</TableCell>
                             <TableCell className="text-right">
-                                <div className="flex justify-end items-center">
+                                <div className="flex flex-col gap-1.5 justify-end items-end">
                                     {row.painPoints && (
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => handleCraftReply(row)}>
-                                                <MessageCircle className="h-4 w-4 text-primary/70" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Craft Outreach Reply</p>
-                                        </TooltipContent>
-                                    </Tooltip>
+                                        <Button variant="ghost" size="sm" onClick={() => handleCraftReply(row)} className="w-full justify-start">
+                                            <MessageCircle className="mr-2 h-4 w-4" />
+                                            Craft Reply
+                                        </Button>
                                     )}
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <Trash2 className="h-4 w-4 text-destructive/70" />
+                                            <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
@@ -577,108 +553,13 @@ export default function ScraperPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                            No research history yet. Add a contact from the Scraper page to get started.
+                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                            No research history yet. Add a contact from the scraper above to get started.
                           </TableCell>
                         </TableRow>
                       )}
                     </TableBody>
                   </Table>
-                </div>
-                {/* Mobile Cards */}
-                <div className="grid gap-4 md:hidden">
-                    {history.length > 0 ? (
-                        history.map(row => (
-                            <Card key={row.id}>
-                                <CardHeader>
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-base truncate">{row.contact.name || 'Unnamed Contact'}</CardTitle>
-                                            <CardDescription>{row.date} via {row.scrapeSource}</CardDescription>
-                                        </div>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
-                                                    <Trash2 className="h-4 w-4 text-destructive/70" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="grid gap-4 text-sm">
-                                    <div className="flex flex-col gap-2">
-                                        <h4 className="font-semibold">Contact Info</h4>
-                                        <div className="flex flex-col gap-1.5 text-xs">
-                                            {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline break-all">{e}</a>)}</div></div>}
-                                            {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
-                                            {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <h4 className="font-semibold">Pain Point Analysis</h4>
-                                        {row.isAnalyzingPainPoints ? (
-                                            <div className="flex items-center gap-2 text-muted-foreground">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                <span>Analyzing...</span>
-                                            </div>
-                                        ) : row.painPoints ? (
-                                              <Accordion type="single" collapsible className="w-full">
-                                                <AccordionItem value="item-1">
-                                                    <AccordionTrigger>
-                                                        <div className="flex gap-1.5 flex-wrap">
-                                                            {row.painPoints.slice(0, 2).map((p, i) => (
-                                                                <Badge key={i} variant="outline" className="cursor-pointer border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
-                                                            ))}
-                                                            {row.painPoints.length > 2 && <Badge variant="secondary">+{row.painPoints.length-2} more</Badge>}
-                                                        </div>
-                                                    </AccordionTrigger>
-                                                    <AccordionContent>
-                                                    <div className="space-y-4">
-                                                        {row.painPoints.map((p, i) => (
-                                                        <div key={i} className="text-xs">
-                                                            <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
-                                                            <p className="font-semibold text-accent mt-1">Plan of Action: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
-                                                        </div>
-                                                        ))}
-                                                    </div>
-                                                    </AccordionContent>
-                                                </AccordionItem>
-                                            </Accordion>
-                                        ) : (
-                                            <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
-                                                <Search className="mr-2 h-4 w-4" />
-                                                Analyze Pain Points
-                                            </Button>
-                                        )}
-                                    </div>
-                                </CardContent>
-                                {row.painPoints && (
-                                <CardFooter>
-                                    <Button size="sm" className="w-full" onClick={() => handleCraftReply(row)}>
-                                    <MessageCircle className="mr-2 h-4 w-4" />
-                                    Craft Outreach Reply
-                                    </Button>
-                                </CardFooter>
-                                )}
-                            </Card>
-                        ))
-                    ) : (
-                          <div className="h-24 text-center text-muted-foreground flex items-center justify-center border rounded-md">
-                            No research history yet.
-                        </div>
-                    )}
                 </div>
               </CardContent>
             </Card>
@@ -687,3 +568,5 @@ export default function ScraperPage() {
     </TooltipProvider>
   );
 }
+
+    

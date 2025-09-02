@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
-    { href: "/", label: "Scraper & Research", icon: Search },
+    { href: "/", label: "Prospecting & Research", icon: Search },
     { href: "/reply-crafter", label: "Reply Crafter", icon: MessageCircle },
 ];
 
@@ -51,3 +51,5 @@ export default function Sidebar() {
         </TooltipProvider>
     );
 }
+
+    
