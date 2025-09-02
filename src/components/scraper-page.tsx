@@ -4,7 +4,7 @@ import React, { useState, useTransition, useEffect } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, Twitter, Download, Search, Trash2, FileDown, MessageCircle } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
@@ -625,7 +625,7 @@ export default function ScraperPage() {
                             </TableCell>
                           </TableRow>
                            )
-                        })}
+                        })
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
