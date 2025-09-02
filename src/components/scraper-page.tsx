@@ -331,7 +331,7 @@ export default function ScraperPage() {
                 <AccordionContent>
                     <div className="border-t">
                       <CardContent className="grid gap-6 pt-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[180px_1fr_1fr] gap-4 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[180px_1fr_1fr] gap-4 items-end">
                             <div className="grid gap-2">
                                 <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
                                 <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
@@ -362,7 +362,7 @@ export default function ScraperPage() {
                                 />
                             </div>
 
-                            <div className="grid gap-2">
+                            <div className="grid gap-2 md:col-span-2 lg:col-span-1">
                                 <label htmlFor="location-input" className="text-sm font-medium">Location (Optional)</label>
                                 <Input 
                                     id="location-input"
@@ -374,7 +374,7 @@ export default function ScraperPage() {
                                 />
                             </div>
                         </div>
-                        <Button onClick={handleScrape} disabled={isScraping} className="w-full sm:w-auto">
+                        <Button onClick={handleScrape} disabled={isScraping} className="w-full md:w-auto">
                             {isScraping ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

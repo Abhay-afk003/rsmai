@@ -40,11 +40,13 @@ export default function RootLayout({
               </div>
             </div>
             <div className="flex flex-col">
-              <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 md:hidden">
+              <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] md:hidden">
                  <Sidebar />
-                 <div className="flex items-center">
-                    <BrainCircuit className="h-6 w-6 text-primary" />
-                    <h1 className="ml-2 text-lg font-semibold">RSM Insights</h1>
+                 <div className="flex items-center flex-1 justify-center">
+                    <Link href="/" className="flex items-center gap-2 font-semibold">
+                        <BrainCircuit className="h-6 w-6 text-primary" />
+                        <h1 className="text-lg">RSM Insights</h1>
+                    </Link>
                 </div>
               </header>
               <main className="flex flex-1 flex-col gap-4 p-2 sm:p-4 md:gap-6 md:p-6">
