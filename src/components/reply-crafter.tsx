@@ -8,6 +8,7 @@ import { performCraftReply } from '@/app/actions';
 import { Textarea } from './ui/textarea';
 import type { AnalysisHistoryItem } from './client-analysis-page';
 import { Separator } from './ui/separator';
+import { ScrollArea } from './ui/scroll-area';
 
 type ReplyCrafterProps = {
   activeContact: AnalysisHistoryItem | null;
@@ -61,76 +62,78 @@ export default function ReplyCrafter({ activeContact }: ReplyCrafterProps) {
   };
 
   return (
-    <div className="p-4 h-full flex flex-col">
-      <h2 className="text-lg font-semibold">Reply Generator</h2>
-      <Separator className="my-4" />
+    <ScrollArea className="h-full">
+        <div className="p-4 h-full flex flex-col">
+        <h2 className="text-lg font-semibold">Reply Generator</h2>
+        <Separator className="my-4" />
 
-      {!activeContact ? (
-        <div className="flex-1 flex items-center justify-center text-center">
-            <p className="text-muted-foreground">Select a contact with analyzed pain points from the history table to start crafting replies.</p>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{activeContact.contact.name}</CardTitle>
-              <CardDescription className="text-xs truncate">
-                {activeContact.scrapeQuery}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-          
-          <div>
-            <h3 className="text-sm font-medium mb-2">Choose Platform</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => handleCraftReply('email')}
-                disabled={isCrafting}
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Email
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleCraftReply('whatsapp')}
-                disabled={isCrafting}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                WhatsApp
-              </Button>
+        {!activeContact ? (
+            <div className="flex-1 flex items-center justify-center text-center">
+                <p className="text-muted-foreground">Select a contact with analyzed pain points from the history table to start crafting replies.</p>
             </div>
-          </div>
+        ) : (
+            <div className="flex-1 flex flex-col gap-4">
+            <Card>
+                <CardHeader>
+                <CardTitle className="text-base">{activeContact.contact.name}</CardTitle>
+                <CardDescription className="text-xs truncate">
+                    {activeContact.scrapeQuery}
+                </CardDescription>
+                </CardHeader>
+            </Card>
+            
+            <div>
+                <h3 className="text-sm font-medium mb-2">Choose Platform</h3>
+                <div className="grid grid-cols-2 gap-2">
+                <Button
+                    variant="outline"
+                    onClick={() => handleCraftReply('email')}
+                    disabled={isCrafting}
+                >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Email
+                </Button>
+                <Button
+                    variant="outline"
+                    onClick={() => handleCraftReply('whatsapp')}
+                    disabled={isCrafting}
+                >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    WhatsApp
+                </Button>
+                </div>
+            </div>
 
-          {(isCrafting || generatedReply) && (
-            <div className="flex-1 flex flex-col">
-                 <h3 className="text-sm font-medium mb-2">Generated Reply</h3>
-                {isCrafting ? (
-                    <div className="flex-1 flex items-center justify-center text-muted-foreground rounded-md border border-dashed p-4">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                        Crafting masterpiece...
-                    </div>
-                ) : (
-                    <div className="relative flex-1">
-                        <Textarea
-                            value={generatedReply}
-                            readOnly
-                            className="w-full h-full resize-none text-sm whitespace-pre-wrap"
-                        />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-2 right-2"
-                            onClick={handleCopyToClipboard}
-                        >
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                    </div>
-                )}
+            {(isCrafting || generatedReply) && (
+                <div className="flex-1 flex flex-col">
+                    <h3 className="text-sm font-medium mb-2">Generated Reply</h3>
+                    {isCrafting ? (
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground rounded-md border border-dashed p-4 min-h-[200px]">
+                            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                            Crafting masterpiece...
+                        </div>
+                    ) : (
+                        <div className="relative flex-1">
+                            <Textarea
+                                value={generatedReply}
+                                readOnly
+                                className="w-full h-full resize-none text-sm whitespace-pre-wrap min-h-[200px]"
+                            />
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2"
+                                onClick={handleCopyToClipboard}
+                            >
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            )}
             </div>
-          )}
+        )}
         </div>
-      )}
-    </div>
+    </ScrollArea>
   );
 }
