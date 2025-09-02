@@ -119,6 +119,7 @@ export default function ScraperPage() {
       title: "Contact Added",
       description: `${result.name || 'Unnamed contact'} has been added to Market Research.`,
     });
+    router.push('/market-research');
   };
 
   const currentSourceConfig = sourceConfig[scrapeSource];
