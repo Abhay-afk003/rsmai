@@ -314,24 +314,24 @@ export default function ScraperPage() {
   return (
     <TooltipProvider>
     <div className="flex flex-col h-full">
-      <header className="px-4 lg:px-6 h-14 flex items-center border-b shrink-0">
+      <header className="hidden md:flex px-4 lg:px-6 h-14 items-center border-b shrink-0">
         <BrainCircuit className="h-6 w-6 text-primary" />
         <h1 className="ml-2 text-lg font-semibold">Prospecting & Research</h1>
       </header>
 
-      <main className="flex-1 p-4 md:p-8 space-y-8 overflow-y-auto">
-        <Accordion type="single" collapsible defaultValue="item-1">
-            <AccordionItem value="item-1">
-                <AccordionTrigger>
+      <div className="flex-1 space-y-4 md:space-y-8 overflow-y-auto p-0 md:p-4">
+        <Accordion type="single" collapsible defaultValue="item-1" className="border-b md:border md:rounded-lg">
+            <AccordionItem value="item-1" className="border-none">
+                <AccordionTrigger className="p-4 md:p-6">
                     <div className="flex flex-col items-start">
                         <h2 className="text-lg font-semibold">Contact Scraping</h2>
                         <p className="text-sm text-muted-foreground text-left">Scrape contact details based on your Ideal Customer Profile (ICP).</p>
                     </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                    <Card className="border-none shadow-none">
+                    <div className="border-t">
                       <CardContent className="grid gap-6 pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[180px_1fr_1fr_auto] gap-4 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[180px_1fr_1fr] gap-4 items-end">
                             <div className="grid gap-2">
                                 <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
                                 <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
@@ -373,21 +373,20 @@ export default function ScraperPage() {
                                     disabled={isPending}
                                 />
                             </div>
-                            
-                            <Button onClick={handleScrape} disabled={isScraping} className="w-full lg:w-auto">
-                              {isScraping ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Scraping...
-                                </>
-                              ) : (
-                                "Scrape Contacts"
-                              )}
-                            </Button>
                         </div>
+                        <Button onClick={handleScrape} disabled={isScraping} className="w-full sm:w-auto">
+                            {isScraping ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Scraping...
+                            </>
+                            ) : (
+                            "Scrape Contacts"
+                            )}
+                        </Button>
 
                         {scrapedResults.length > 0 && (
-                            <div className="border rounded-lg p-4">
+                            <div className="border rounded-lg p-2 sm:p-4">
                                 <h3 className="font-semibold mb-2">Scraped Contacts ({scrapedResults.length} found)</h3>
                                 <p className="text-sm text-muted-foreground mb-4">Select contacts to add them to your research history below.</p>
                                 <ScrollArea className="h-72">
@@ -454,7 +453,7 @@ export default function ScraperPage() {
                         )}
                         
                       </CardContent>
-                    </Card>
+                    </div>
                 </AccordionContent>
             </AccordionItem>
         </Accordion>
@@ -503,13 +502,13 @@ export default function ScraperPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[60px] text-center">COUNT</TableHead>
-                        <TableHead className="min-w-[100px]">DATE</TableHead>
-                        <TableHead className="min-w-[300px]">CLIENT DETAILS</TableHead>
-                        <TableHead className="min-w-[150px]">SOCIALS MISSING</TableHead>
-                        <TableHead className="min-w-[300px]">PAIN POINTS</TableHead>
-                        <TableHead className="min-w-[200px]">FEEDBACK</TableHead>
-                        <TableHead className="w-[120px] text-right">ACTIONS</TableHead>
+                        <TableHead className="w-[60px] text-center px-2">COUNT</TableHead>
+                        <TableHead className="min-w-[100px] px-2">DATE</TableHead>
+                        <TableHead className="min-w-[300px] px-2">CLIENT DETAILS</TableHead>
+                        <TableHead className="min-w-[150px] px-2">SOCIALS MISSING</TableHead>
+                        <TableHead className="min-w-[300px] px-2">PAIN POINTS</TableHead>
+                        <TableHead className="min-w-[200px] px-2">FEEDBACK</TableHead>
+                        <TableHead className="w-[120px] text-right px-2">ACTIONS</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -531,9 +530,9 @@ export default function ScraperPage() {
 
                            return (
                           <TableRow key={row.id}>
-                            <TableCell className="text-center">{index + 1}</TableCell>
-                            <TableCell>{row.date}</TableCell>
-                            <TableCell className="align-top">
+                            <TableCell className="text-center px-2 py-4">{index + 1}</TableCell>
+                            <TableCell className="px-2 py-4">{row.date}</TableCell>
+                            <TableCell className="align-top px-2 py-4">
                                 <div className="font-semibold text-base">{row.contact.name || 'Unnamed Contact'}</div>
                                 <p className="text-xs text-muted-foreground line-clamp-3 my-2">{row.contact.summary}</p>
                                 <div className="text-xs space-y-1.5 mt-2">
@@ -543,7 +542,7 @@ export default function ScraperPage() {
                                     <div className="flex items-start gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground mt-0.5" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
                                 </div>
                             </TableCell>
-                            <TableCell className="align-top">
+                            <TableCell className="align-top px-2 py-4">
                                 {missingSocials.length > 0 ? (
                                     <div className="flex flex-wrap gap-2">
                                         {missingSocials.map(([key, Icon]) => (
@@ -561,7 +560,7 @@ export default function ScraperPage() {
                                     <span className="text-xs text-muted-foreground italic">None</span>
                                 )}
                             </TableCell>
-                            <TableCell className="align-top">
+                            <TableCell className="align-top px-2 py-4">
                               {row.isAnalyzingPainPoints ? (
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -585,7 +584,7 @@ export default function ScraperPage() {
                                 </Button>
                               )}
                             </TableCell>
-                            <TableCell className="align-top">
+                            <TableCell className="align-top px-2 py-4">
                                 <Textarea 
                                     placeholder="Log feedback, replies..."
                                     className="text-xs h-24"
@@ -593,7 +592,7 @@ export default function ScraperPage() {
                                     onChange={(e) => handleFeedbackChange(row.id, e.target.value)}
                                 />
                             </TableCell>
-                            <TableCell className="text-right align-top">
+                            <TableCell className="text-right align-top px-2 py-4">
                                 <div className="flex flex-col gap-1.5 justify-end items-end">
                                     {row.painPoints && (
                                         <Button variant="ghost" size="sm" onClick={() => handleCraftReply(row)} className="w-full justify-start">
@@ -638,7 +637,7 @@ export default function ScraperPage() {
                 </div>
               </CardContent>
             </Card>
-      </main>
+      </div>
     </div>
     </TooltipProvider>
   );

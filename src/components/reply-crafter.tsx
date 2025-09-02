@@ -133,7 +133,7 @@ export default function ReplyCrafter() {
 
   return (
       <div className="flex flex-col h-full">
-        <header className="px-4 lg:px-6 h-14 flex items-center border-b shrink-0">
+        <header className="hidden md:flex px-4 lg:px-6 h-14 items-center border-b shrink-0">
           <BrainCircuit className="h-6 w-6 text-primary" />
           <h1 className="ml-2 text-lg font-semibold">Reply Crafter</h1>
         </header>
