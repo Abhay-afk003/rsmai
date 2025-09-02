@@ -1,9 +1,9 @@
 "use client";
 import React from 'react';
-import ClientAnalysisPage from '@/components/client-analysis-page';
+import ScraperPage from '@/components/scraper-page';
 
 export default function Home() {
   return (
-    <ClientAnalysisPage />
+    <ScraperPage />
   );
 }

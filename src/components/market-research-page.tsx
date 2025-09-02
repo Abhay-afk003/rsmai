@@ -8,19 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, FileDown, User, Link as LinkIcon, Phone, Mail, Users, Trash2, MapPin, MessageCircle, Bot, ChevronDown } from "lucide-react";
-import { performPainPointAnalysis, performScrape } from "@/app/actions";
-import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
+import { Loader2, Download, BrainCircuit, Search, MapPin, Users, Phone, Mail, Trash2, FileDown, MessageCircle } from "lucide-react";
+import { performPainPointAnalysis } from "@/app/actions";
+import type { AnalyzeClientPainPointsOutput, ScrapedResult, ScrapeWebsiteInput } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRouter } from "next/navigation";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
-
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
 
@@ -35,28 +29,9 @@ export type AnalysisHistoryItem = {
   painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
 };
 
-const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; icon: React.ElementType }> = {
-    website: { label: "Web & Public Data", placeholder: "e.g., 'marketing managers in tech startups'", icon: Globe },
-    reddit: { label: "Reddit Topic/Subreddit", placeholder: "e.g., 'saas founders'", icon: MessageSquare },
-    news: { label: "News Articles Query", placeholder: "e.g., 'companies seeking funding'", icon: Newspaper },
-    instagram: { label: "Instagram Search", placeholder: "e.g., 'fashion influencers'", icon: Instagram },
-    facebook: { label: "Facebook Search", placeholder: "e.g., 'local business owners'", icon: Facebook },
-    linkedin: { label: "LinkedIn Search", placeholder: "e.g., 'software engineers in SF'", icon: Linkedin },
-    youtube: { label: "YouTube Search", placeholder: "e.g., 'tech review channels'", icon: Youtube },
-}
-
-type ScrapedItem = ScrapedResult & { id: string };
-
-export default function ClientAnalysisPage() {
-  const [scrapeQuery, setScrapeQuery] = useState("");
-  const [scrapeLocation, setScrapeLocation] = useState("");
-  const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
-  const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
+export default function MarketResearchPage() {
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
-  const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
-  const [isScraperOpen, setIsScraperOpen] = useState(true);
-  const isPending = isScraping || isAnalyzing;
   const router = useRouter();
 
   const { toast } = useToast();
@@ -80,54 +55,6 @@ export default function ClientAnalysisPage() {
         console.error("Failed to save history to sessionStorage", error);
     }
   }, [history]);
-
-  const handleScrape = () => {
-    if (!scrapeQuery.trim()) {
-      toast({ title: "Input required", description: `Please enter a ${sourceConfig[scrapeSource].label}.`, variant: "destructive" });
-      return;
-    }
-
-    setScrapedResults([]);
-    const scrapeInput: ScrapeWebsiteInput = { 
-      source: scrapeSource, 
-      query: scrapeQuery,
-      ...(scrapeLocation.trim() && { location: scrapeLocation.trim() })
-    };
-
-    startScrapingTransition(async () => {
-      const scrapeResult = await performScrape(scrapeInput);
-      if (scrapeResult.success && scrapeResult.data) {
-        setScrapedResults(scrapeResult.data.results.map(r => ({ ...r, id: new Date().toISOString() + Math.random() })));
-        toast({
-          title: "Scraping Complete",
-          description: `${scrapeResult.data.results.length} contacts found. Select which ones to add to your research history.`,
-        });
-      } else {
-        toast({
-          title: "Scraping Failed",
-          description: scrapeResult.error || "An unknown error occurred.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-
-  const handleAddToHistory = (result: ScrapedItem) => {
-    const newHistoryItem: AnalysisHistoryItem = {
-      id: result.id,
-      date: new Date().toLocaleDateString(),
-      scrapeQuery: scrapeQuery || "N/A",
-      scrapeSource: scrapeSource,
-      ...(scrapeLocation.trim() && { scrapeLocation: scrapeLocation.trim() }),
-      contact: result,
-    };
-    setHistory(prev => [newHistoryItem, ...prev]);
-    setScrapedResults(prev => prev.filter(r => r.id !== result.id));
-    toast({
-      title: "Contact Added",
-      description: `${result.name || 'Unnamed contact'} has been added to your research history.`,
-    });
-  };
 
   const handlePainPointAnalysis = (id: string, clientData: string) => {
     setHistory(prev => prev.map(item => item.id === id ? { ...item, isAnalyzingPainPoints: true } : item));
@@ -268,161 +195,16 @@ export default function ClientAnalysisPage() {
     router.push('/reply-crafter');
   };
 
-  const currentSourceConfig = sourceConfig[scrapeSource];
-
   return (
     <TooltipProvider>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col h-full">
         <header className="px-4 lg:px-6 h-14 flex items-center border-b shrink-0">
           <BrainCircuit className="h-6 w-6 text-primary" />
-          <h1 className="ml-2 text-lg font-semibold">Client Analysis</h1>
+          <h1 className="ml-2 text-lg font-semibold">Market Research</h1>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 lg:p-12 space-y-8">
-            <Collapsible open={isScraperOpen} onOpenChange={setIsScraperOpen}>
-              <Card>
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="flex flex-row items-center justify-between cursor-pointer">
-                    <div>
-                      <CardTitle>Contact Scraping</CardTitle>
-                      <CardDescription>
-                        Scrape contact details from various sources based on your Ideal Customer Profile (ICP).
-                      </CardDescription>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <ChevronDown className={cn("transition-transform", isScraperOpen && "rotate-180")} />
-                      <span className="sr-only">Toggle Scraper</span>
-                    </Button>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <CardContent className="grid gap-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[180px_1fr_1fr_auto] gap-4 items-end">
-                          <div className="grid gap-2">
-                              <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
-                              <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
-                                  <SelectTrigger id="scrape-source">
-                                      <SelectValue placeholder="Select source" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      <SelectItem value="website"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Web & Public Data</div></SelectItem>
-                                      <SelectItem value="reddit"><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Reddit</div></SelectItem>
-                                      <SelectItem value="news"><div className="flex items-center gap-2"><Newspaper className="h-4 w-4" /> News Articles</div></SelectItem>
-                                      <SelectItem value="linkedin"><div className="flex items-center gap-2"><Linkedin className="h-4 w-4" /> LinkedIn</div></SelectItem>
-                                      <SelectItem value="facebook"><div className="flex items-center gap-2"><Facebook className="h-4 w-4" /> Facebook</div></SelectItem>
-                                      <SelectItem value="instagram"><div className="flex items-center gap-2"><Instagram className="h-4 w-4" /> Instagram</div></SelectItem>
-                                      <SelectItem value="youtube"><div className="flex items-center gap-2"><Youtube className="h-4 w-4" /> YouTube</div></SelectItem>
-                                  </SelectContent>
-                              </Select>
-                          </div>
-
-                          <div className="grid gap-2">
-                              <label htmlFor="query-input" className="text-sm font-medium">{currentSourceConfig.label}</label>
-                              <Input 
-                                  id="query-input"
-                                  placeholder={currentSourceConfig.placeholder}
-                                  value={scrapeQuery}
-                                  onChange={(e) => setScrapeQuery(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
-                                  disabled={isPending}
-                              />
-                          </div>
-
-                          <div className="grid gap-2">
-                              <label htmlFor="location-input" className="text-sm font-medium">Location (Optional)</label>
-                              <Input 
-                                  id="location-input"
-                                  placeholder="e.g., California, USA"
-                                  value={scrapeLocation}
-                                  onChange={(e) => setScrapeLocation(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
-                                  disabled={isPending}
-                              />
-                          </div>
-                          
-                          <Button onClick={handleScrape} disabled={isPending} className="w-full lg:w-auto">
-                            {isScraping ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Scraping...
-                              </>
-                            ) : (
-                              "Scrape Contacts"
-                            )}
-                          </Button>
-                      </div>
-
-                      {scrapedResults.length > 0 && (
-                          <div className="border rounded-lg p-4">
-                              <h3 className="font-semibold mb-2">Scraped Contacts</h3>
-                              <ScrollArea className="h-72">
-                                <Accordion type="single" collapsible className="w-full pr-4">
-                                    {scrapedResults.map((result) => (
-                                        <AccordionItem value={result.id} key={result.id}>
-                                            <div className="flex justify-between items-center w-full py-1">
-                                                <AccordionTrigger className="flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="h-4 w-4" />
-                                                        <span className="truncate text-left font-semibold">{result.name || "Unnamed Contact"}</span>
-                                                    </div>
-                                                </AccordionTrigger>
-                                                <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAddToHistory(result); }}>
-                                                    Add to History
-                                                </Button>
-                                            </div>
-                                            <AccordionContent>
-                                                <p className="text-sm text-muted-foreground mb-4">{result.summary}</p>
-                                                <div className="grid gap-2 text-xs">
-                                                    <div className="flex items-center gap-2">
-                                                        <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                                                        <a href={result.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
-                                                            {result.sourceUrl}
-                                                        </a>
-                                                    </div>
-                                                    {result.emails && result.emails.length > 0 && (
-                                                        <div className="flex items-center gap-2">
-                                                            <Mail className="h-4 w-4 text-muted-foreground" />
-                                                            <div className="flex flex-wrap gap-x-2 gap-y-1">
-                                                                {result.emails.map(email => (
-                                                                    <a key={email} href={`mailto:${email}`} className="text-primary hover:underline">{email}</a>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {result.phoneNumbers && result.phoneNumbers.length > 0 && (
-                                                        <div className="flex items-center gap-2">
-                                                            <Phone className="h-4 w-4 text-muted-foreground" />
-                                                            <div className="flex flex-wrap gap-x-2 gap-y-1">
-                                                                {result.phoneNumbers.map(phone => (
-                                                                    <a key={phone} href={`tel:${phone}`} className="text-primary hover:underline">{phone}</a>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {result.socialMediaLinks && result.socialMediaLinks.length > 0 && (
-                                                        <div className="flex items-center gap-2">
-                                                            <Users className="h-4 w-4 text-muted-foreground" />
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {result.socialMediaLinks.map(link => (
-                                                                    <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(link).hostname.replace('www.','')}</a>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    ))}
-                                </Accordion>
-                              </ScrollArea>
-                          </div>
-                      )}
-                    </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          
-            <Card>
+        <main className="flex-1 p-4 md:p-8 lg:p-12 space-y-8 overflow-y-auto">
+          <Card>
               <CardHeader className="flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex-1">
                   <CardTitle>Research History</CardTitle>
@@ -580,7 +362,7 @@ export default function ClientAnalysisPage() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                            No research history yet. Add a contact to get started.
+                            No research history yet. Add a contact from the Scraper page to get started.
                           </TableCell>
                         </TableRow>
                       )}
