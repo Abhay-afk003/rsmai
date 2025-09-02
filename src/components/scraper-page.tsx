@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, Twitter, Download, Search, Trash2, FileDown, MessageCircle } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
-import type { ScrapeWebsiteInput, ScrapedResult, AnalyzeClientPainPointsOutput } from "@/ai/schemas";
+import type { ScrapeWebsiteInput, ScrapedResult, AnalyzeClientPainPointsOutput, CraftOutreachReplyOutput } from "@/ai/schemas";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -43,6 +43,8 @@ export type AnalysisHistoryItem = {
     painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
     feedback?: string;
 };
+export type { CraftOutreachReplyOutput };
+
 
 type ScrapedItem = ScrapedResult & { id: string };
 
@@ -103,7 +105,7 @@ export default function ScraperPage() {
     startScrapingTransition(async () => {
       const scrapeResult = await performScrape(scrapeInput);
       if (scrapeResult.success && scrapeResult.data) {
-        setScrapedResults(scrapeResult.data.results.map((r) => ({ ...r, id: `${Date.now()}-${Math.random()}-${r.sourceUrl}` })));
+        setScrapedResults(scrapeResult.data.results.map((r) => ({ ...r, id: `${r.sourceUrl}-${Math.random()}` })));
         toast({
           title: "Scraping Complete",
           description: `${scrapeResult.data.results.length} contacts found. Select which ones to add to your research.`,
@@ -528,102 +530,102 @@ export default function ScraperPage() {
                             const missingSocials = Object.entries(SOCIALS_TO_CHECK).filter(([key]) => !foundSocials.has(key as string));
 
                            return (
-                            <TableRow key={row.id}>
-                                <TableCell className="text-center">{index + 1}</TableCell>
-                                <TableCell>{row.date}</TableCell>
-                                <TableCell className="max-w-xs align-top">
-                                    <div className="font-semibold text-base">{row.contact.name || 'Unnamed Contact'}</div>
-                                    <p className="text-xs text-muted-foreground line-clamp-3 my-2">{row.contact.summary}</p>
-                                    <div className="text-xs space-y-1.5 mt-2">
-                                        <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails?.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
-                                        <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers?.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
-                                        <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks?.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
-                                        <div className="flex items-center gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="align-top">
-                                    {missingSocials.length > 0 ? (
-                                        <div className="flex flex-wrap gap-2">
-                                            {missingSocials.map(([key, Icon]) => (
-                                                <Tooltip key={key}>
-                                                    <TooltipTrigger asChild>
-                                                        <Icon className="h-4 w-4 text-muted-foreground" />
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Missing {key.charAt(0).toUpperCase() + key.slice(1)}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground italic">None</span>
-                                    )}
-                                </TableCell>
-                                <TableCell className="align-top">
-                                {row.isAnalyzingPainPoints ? (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Analyzing...</span>
-                                    </div>
-                                ) : row.painPoints ? (
-                                    <div className="space-y-3">
-                                        {row.painPoints.map((p, i) => (
-                                        <div key={i} className="text-xs">
-                                            <p className="font-semibold text-primary">{p.category}</p>
-                                            <p className="text-foreground mt-0.5">{p.description}</p>
-                                            <p className="font-semibold text-accent mt-1.5">Plan:</p>
-                                            <p className="text-foreground mt-0.5">{p.suggestedService}</p>
-                                        </div>
+                          <TableRow key={row.id}>
+                            <TableCell className="text-center">{index + 1}</TableCell>
+                            <TableCell>{row.date}</TableCell>
+                            <TableCell className="max-w-xs align-top">
+                                <div className="font-semibold text-base">{row.contact.name || 'Unnamed Contact'}</div>
+                                <p className="text-xs text-muted-foreground line-clamp-3 my-2">{row.contact.summary}</p>
+                                <div className="text-xs space-y-1.5 mt-2">
+                                    <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails?.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers?.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks?.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-center gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
+                                </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                                {missingSocials.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {missingSocials.map(([key, Icon]) => (
+                                            <Tooltip key={key}>
+                                                <TooltipTrigger asChild>
+                                                    <Icon className="h-4 w-4 text-muted-foreground" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Missing {key.charAt(0).toUpperCase() + key.slice(1)}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
                                         ))}
                                     </div>
                                 ) : (
-                                    <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
-                                    <Search className="mr-2 h-4 w-4" />
-                                    Analyze
-                                    </Button>
+                                    <span className="text-xs text-muted-foreground italic">None</span>
                                 )}
-                                </TableCell>
-                                <TableCell className="align-top">
-                                    <Textarea 
-                                        placeholder="Log feedback, replies..."
-                                        className="text-xs h-24"
-                                        value={row.feedback}
-                                        onChange={(e) => handleFeedbackChange(row.id, e.target.value)}
-                                    />
-                                </TableCell>
-                                <TableCell className="text-right align-top">
-                                    <div className="flex flex-col gap-1.5 justify-end items-end">
-                                        {row.painPoints && (
-                                            <Button variant="ghost" size="sm" onClick={() => handleCraftReply(row)} className="w-full justify-start">
-                                                <MessageCircle className="mr-2 h-4 w-4" />
-                                                Craft Reply
+                            </TableCell>
+                            <TableCell className="align-top">
+                              {row.isAnalyzingPainPoints ? (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span>Analyzing...</span>
+                                </div>
+                              ) : row.painPoints ? (
+                                <div className="space-y-3">
+                                    {row.painPoints.map((p, i) => (
+                                      <div key={i} className="text-xs">
+                                          <p className="font-semibold text-primary">{p.category}</p>
+                                          <p className="text-foreground mt-0.5">{p.description}</p>
+                                          <p className="font-semibold text-accent mt-1.5">Plan:</p>
+                                          <p className="text-foreground mt-0.5">{p.suggestedService}</p>
+                                      </div>
+                                    ))}
+                                </div>
+                              ) : (
+                                <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
+                                  <Search className="mr-2 h-4 w-4" />
+                                  Analyze
+                                </Button>
+                              )}
+                            </TableCell>
+                            <TableCell className="align-top">
+                                <Textarea 
+                                    placeholder="Log feedback, replies..."
+                                    className="text-xs h-24"
+                                    value={row.feedback}
+                                    onChange={(e) => handleFeedbackChange(row.id, e.target.value)}
+                                />
+                            </TableCell>
+                            <TableCell className="text-right align-top">
+                                <div className="flex flex-col gap-1.5 justify-end items-end">
+                                    {row.painPoints && (
+                                        <Button variant="ghost" size="sm" onClick={() => handleCraftReply(row)} className="w-full justify-start">
+                                            <MessageCircle className="mr-2 h-4 w-4" />
+                                            Craft Reply
+                                        </Button>
+                                    )}
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete
                                             </Button>
-                                        )}
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                           );
-                        })
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                            This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </TableCell>
+                          </TableRow>
+                           )
+                        })}
                       ) : (
                         <TableRow>
                           <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
@@ -641,3 +643,5 @@ export default function ScraperPage() {
     </TooltipProvider>
   );
 }
+
+    

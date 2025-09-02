@@ -58,6 +58,8 @@ export const CraftOutreachReplyInputSchema = z.object({
 export type CraftOutreachReplyInput = z.infer<typeof CraftOutreachReplyInputSchema>;
 
 export const CraftOutreachReplyOutputSchema = z.object({
-    message: z.string().describe("The generated outreach message, formatted for the specified platform."),
+    subject: z.string().optional().describe("The subject line for an email. Should be compelling and create urgency or curiosity. Not needed for WhatsApp."),
+    body: z.string().describe("The main content of the message. It should be concise, professional, and directly reference the client's pain points."),
+    callToAction: z.string().describe("The closing call to action, e.g., asking for a brief call."),
 });
 export type CraftOutreachReplyOutput = z.infer<typeof CraftOutreachReplyOutputSchema>;

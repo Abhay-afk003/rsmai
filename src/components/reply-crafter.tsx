@@ -6,7 +6,7 @@ import { Loader2, Mail, MessageSquare, Copy, BrainCircuit, X } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { performCraftReply } from '@/app/actions';
 import { Textarea } from './ui/textarea';
-import type { AnalysisHistoryItem } from './scraper-page';
+import type { AnalysisHistoryItem, CraftOutreachReplyOutput } from './scraper-page';
 import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
@@ -17,16 +17,52 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 
 type Platform = 'email' | 'whatsapp';
 
+const ReplyPart = ({ label, content, platform }: { label: string; content?: string; platform: Platform }) => {
+  const { toast } = useToast();
+  if (!content) return null;
+
+  const handleCopyToClipboard = () => {
+    navigator.clipboard.writeText(content);
+    toast({ title: 'Copied to Clipboard', description: `${label} copied!` });
+  };
+  
+  const getRecipient = () => {
+      if (platform === 'email') return 'mailto:';
+      if (platform === 'whatsapp') return `https://wa.me/`;
+      return '';
+  }
+
+  return (
+    <div className="grid gap-2">
+        <div className="flex justify-between items-center">
+            <label className="text-sm font-semibold text-muted-foreground">{label}</label>
+            <div className='flex gap-2'>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopyToClipboard}>
+                    <Copy className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
+      <Textarea
+        value={content}
+        readOnly
+        className="w-full resize-none text-sm whitespace-pre-wrap"
+        rows={label === 'Body' ? 8 : 1}
+      />
+    </div>
+  );
+};
+
+
 export default function ReplyCrafter() {
   const [activeContact, setActiveContact] = useState<AnalysisHistoryItem | null>(null);
-  const [generatedReply, setGeneratedReply] = useState('');
+  const [generatedReply, setGeneratedReply] = useState<CraftOutreachReplyOutput | null>(null);
   const [isCrafting, startCraftingTransition] = useTransition();
+  const [platform, setPlatform] = useState<Platform>('email');
   const { toast } = useToast();
   const router = useRouter();
 
@@ -51,8 +87,8 @@ export default function ReplyCrafter() {
       });
       return;
     }
-
-    setGeneratedReply('');
+    setPlatform(platform);
+    setGeneratedReply(null);
     startCraftingTransition(async () => {
       const result = await performCraftReply({
         platform,
@@ -61,7 +97,7 @@ export default function ReplyCrafter() {
       });
 
       if (result.success && result.data) {
-        setGeneratedReply(result.data.message);
+        setGeneratedReply(result.data);
         toast({
           title: 'Reply Crafted',
           description: `Your ${platform} message is ready.`,
@@ -76,20 +112,25 @@ export default function ReplyCrafter() {
     });
   };
   
-  const handleCopyToClipboard = () => {
-    if (!generatedReply) return;
-    navigator.clipboard.writeText(generatedReply);
-    toast({ title: 'Copied to Clipboard' });
-  };
-
   const clearActiveContact = () => {
     sessionStorage.removeItem('activeContact');
     setActiveContact(null);
-    setGeneratedReply('');
+    setGeneratedReply(null);
     toast({
         title: 'Contact Cleared',
         description: 'You can now select a new contact for reply crafting.'
     });
+  }
+
+  const getRecipientInfo = () => {
+    if (!activeContact) return null;
+    if (platform === 'email') {
+        return activeContact.contact.emails?.[0] ? `To: ${activeContact.contact.emails[0]}` : 'No email found';
+    }
+    if (platform === 'whatsapp') {
+        return activeContact.contact.phoneNumbers?.[0] ? `To: ${activeContact.contact.phoneNumbers[0]}` : 'No phone number found';
+    }
+    return null;
   }
 
   return (
@@ -163,31 +204,19 @@ export default function ReplyCrafter() {
                     </div>
                 </div>
 
-                {(isCrafting || generatedReply) && (
-                    <div className="flex flex-col">
-                        <h3 className="text-base font-semibold mb-2">Generated Reply</h3>
-                        {isCrafting ? (
-                            <div className="flex items-center justify-center text-muted-foreground rounded-md border border-dashed p-4 min-h-[300px]">
-                                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                                Crafting masterpiece...
-                            </div>
-                        ) : (
-                            <div className="relative">
-                                <Textarea
-                                    value={generatedReply}
-                                    readOnly
-                                    className="w-full resize-none text-sm whitespace-pre-wrap min-h-[300px]"
-                                />
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2"
-                                    onClick={handleCopyToClipboard}
-                                >
-                                    <Copy className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
+                {isCrafting && (
+                    <div className="flex items-center justify-center text-muted-foreground rounded-md border border-dashed p-4 min-h-[300px]">
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                        Crafting masterpiece...
+                    </div>
+                )}
+
+                {generatedReply && (
+                    <div className="space-y-4">
+                        <h3 className="text-base font-semibold text-primary">{getRecipientInfo()}</h3>
+                        {platform === 'email' && <ReplyPart label="Subject" content={generatedReply.subject} platform={platform} />}
+                        <ReplyPart label="Body" content={generatedReply.body} platform={platform} />
+                        <ReplyPart label="Call To Action" content={generatedReply.callToAction} platform={platform} />
                     </div>
                 )}
                 </div>
@@ -197,5 +226,3 @@ export default function ReplyCrafter() {
       </div>
   );
 }
-
-    

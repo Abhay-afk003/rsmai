@@ -31,15 +31,11 @@ const prompt = ai.definePrompt({
     Platform: {{platform}}
 
     Your Task:
-    1.  Based on the platform ({{platform}}), write a concise, powerful, and professional message.
-    2.  If the platform is 'email', format it as a professional email with a subject line and body. The subject line must be compelling and create urgency or curiosity.
-    3.  If the platform is 'whatsapp', make it a bit more casual but still professional and direct. No subject line needed.
-    4.  Directly reference one or two of the most critical pain points. Do NOT be vague. Show them you've done your homework.
-    5.  Subtly position our agency as the solution by hinting at the 'suggestedService' without sounding like a generic sales pitch. The goal is to start a conversation, not close the deal in the first message.
-    6.  Keep it short and to the point. Busy people don't read long messages.
-    7.  End with a clear, low-friction call to action, like asking for a brief 15-minute call.
-
-    Generate the reply in the 'message' field of the output.
+    1.  Based on the platform ({{platform}}), generate a concise, powerful, and professional message broken down into distinct parts.
+    2.  If the platform is 'email', create a compelling 'subject' that creates urgency or curiosity. The 'body' should directly reference one or two of the most critical pain points, showing you've done your homework. Subtly position our agency as the solution by hinting at the 'suggestedService' without sounding like a generic sales pitch. The goal is to start a conversation, not close the deal.
+    3.  If the platform is 'whatsapp', make the 'body' a bit more casual but still professional and direct. No subject line is needed.
+    4.  For both platforms, create a clear, low-friction 'callToAction' like "Are you available for a brief 15-minute chat next week to discuss this further?".
+    5.  Populate the corresponding fields in the output schema: 'subject' (for email only), 'body', and 'callToAction'.
     `,
 });
 
