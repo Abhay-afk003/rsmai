@@ -2,20 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BrainCircuit, Search, MessageCircle } from "lucide-react";
+import { BrainCircuit } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { navItems } from "@/lib/nav-items";
 
 
@@ -55,24 +49,6 @@ const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 export default function Sidebar() {
     const isMobile = useIsMobile();
     const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) {
-        // On the server or during hydration, render a placeholder or nothing for the mobile menu
-        // to avoid hydration mismatch. The desktop sidebar is hidden by CSS.
-        return (
-            <div className="md:hidden">
-                <Button variant="outline" size="icon" className="shrink-0">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Toggle navigation menu</span>
-                </Button>
-            </div>
-        );
-    }
     
     if (isMobile) {
         return (
