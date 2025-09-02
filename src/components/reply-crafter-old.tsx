@@ -2,24 +2,14 @@
 import React, { useState, useTransition, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Loader2, Mail, MessageSquare, Copy, BrainCircuit, X } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, Copy, BrainCircuit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { performCraftReply } from '@/app/actions';
 import { Textarea } from './ui/textarea';
-import type { AnalysisHistoryItem } from './market-research-page';
+import type { AnalysisHistoryItem } from './client-analysis-page';
+import { Separator } from './ui/separator';
+import { ScrollArea } from './ui/scroll-area';
 import { useRouter } from 'next/navigation';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-
 
 type Platform = 'email' | 'whatsapp';
 
@@ -82,64 +72,31 @@ export default function ReplyCrafter() {
     toast({ title: 'Copied to Clipboard' });
   };
 
-  const clearActiveContact = () => {
-    sessionStorage.removeItem('activeContact');
-    setActiveContact(null);
-    setGeneratedReply('');
-    toast({
-        title: 'Contact Cleared',
-        description: 'You can now select a new contact for reply crafting.'
-    });
-  }
-
   return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-screen">
         <header className="px-4 lg:px-6 h-14 flex items-center border-b shrink-0">
           <BrainCircuit className="h-6 w-6 text-primary" />
           <h1 className="ml-2 text-lg font-semibold">Reply Crafter</h1>
         </header>
-        <div className="flex-1 overflow-y-auto">
+        <ScrollArea className="flex-1">
             <div className="p-4 md:p-8 lg:p-12 h-full flex flex-col">
             {!activeContact ? (
                 <div className="flex-1 flex items-center justify-center text-center">
                     <div className="flex flex-col items-center gap-4">
-                        <p className="text-muted-foreground">Select a contact from the Market Research page to start crafting replies.</p>
-                        <Button onClick={() => router.push('/market-research')}>Go to Market Research</Button>
+                        <p className="text-muted-foreground">Select a contact from the analysis page to start crafting replies.</p>
+                        <Button onClick={() => router.push('/')}>Go to Client Analysis</Button>
                     </div>
                 </div>
             ) : (
                 <div className="flex flex-col gap-6">
-                  <Card>
-                      <CardHeader>
-                          <div className="flex justify-between items-start">
-                              <div>
-                                  <CardTitle className="text-base">{activeContact.contact.name}</CardTitle>
-                                  <CardDescription className="text-xs truncate">
-                                      {activeContact.scrapeQuery} in {activeContact.scrapeLocation || activeContact.scrapeSource}
-                                  </CardDescription>
-                              </div>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <X className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Clear Current Contact?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This will remove the current contact from this page. You can select them again from the Market Research page.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={clearActiveContact}>Clear</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                                </AlertDialog>
-                          </div>
-                      </CardHeader>
-                  </Card>
+                <Card>
+                    <CardHeader>
+                    <CardTitle className="text-base">{activeContact.contact.name}</CardTitle>
+                    <CardDescription className="text-xs truncate">
+                        {activeContact.scrapeQuery} in {activeContact.scrapeLocation || activeContact.scrapeSource}
+                    </CardDescription>
+                    </CardHeader>
+                </Card>
                 
                 <div>
                     <h3 className="text-base font-semibold mb-2">Choose Platform</h3>
@@ -164,19 +121,19 @@ export default function ReplyCrafter() {
                 </div>
 
                 {(isCrafting || generatedReply) && (
-                    <div className="flex flex-col">
+                    <div className="flex-1 flex flex-col">
                         <h3 className="text-base font-semibold mb-2">Generated Reply</h3>
                         {isCrafting ? (
-                            <div className="flex items-center justify-center text-muted-foreground rounded-md border border-dashed p-4 min-h-[300px]">
+                            <div className="flex-1 flex items-center justify-center text-muted-foreground rounded-md border border-dashed p-4 min-h-[300px]">
                                 <Loader2 className="mr-2 h-6 w-6 animate-spin" />
                                 Crafting masterpiece...
                             </div>
                         ) : (
-                            <div className="relative">
+                            <div className="relative flex-1">
                                 <Textarea
                                     value={generatedReply}
                                     readOnly
-                                    className="w-full resize-none text-sm whitespace-pre-wrap min-h-[300px]"
+                                    className="w-full h-full resize-none text-sm whitespace-pre-wrap min-h-[300px]"
                                 />
                                 <Button
                                     variant="ghost"
@@ -193,7 +150,7 @@ export default function ReplyCrafter() {
                 </div>
             )}
             </div>
-        </div>
+        </ScrollArea>
       </div>
   );
 }
