@@ -4,7 +4,7 @@ import React, { useState, useTransition, useEffect } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, Twitter, Download, Search, Trash2, FileDown, MessageCircle } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 type ScrapeSource = ScrapeWebsiteInput["source"];
 
 const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; icon: React.ElementType }> = {
-    website: { label: "Web & Public Data", placeholder: "e.g., 'marketing managers in tech startups'", icon: Globe },
+    website: { label: "Web & Public Data", placeholder: "e.g., 'marketing managers'", icon: Globe },
     reddit: { label: "Reddit Topic/Subreddit", placeholder: "e.g., 'saas founders'", icon: MessageSquare },
     news: { label: "News Articles Query", placeholder: "e.g., 'companies seeking funding'", icon: Newspaper },
     instagram: { label: "Instagram Search", placeholder: "e.g., 'fashion influencers'", icon: Instagram },
@@ -319,13 +319,13 @@ export default function ScraperPage() {
         <h1 className="ml-2 text-lg font-semibold">Prospecting & Research</h1>
       </header>
 
-      <main className="flex-1 p-4 md:p-8 lg:p-12 space-y-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 space-y-8 overflow-y-auto">
         <Accordion type="single" collapsible defaultValue="item-1">
             <AccordionItem value="item-1">
                 <AccordionTrigger>
                     <div className="flex flex-col items-start">
                         <h2 className="text-lg font-semibold">Contact Scraping</h2>
-                        <p className="text-sm text-muted-foreground">Scrape contact details based on your Ideal Customer Profile (ICP).</p>
+                        <p className="text-sm text-muted-foreground text-left">Scrape contact details based on your Ideal Customer Profile (ICP).</p>
                     </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -499,16 +499,16 @@ export default function ScraperPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="border rounded-md">
+                <div className="border rounded-md overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[60px] text-center">COUNT</TableHead>
-                        <TableHead className="w-[100px]">DATE</TableHead>
-                        <TableHead>CLIENT DETAILS</TableHead>
-                        <TableHead className="w-[150px]">SOCIALS MISSING</TableHead>
-                        <TableHead>PAIN POINTS</TableHead>
-                        <TableHead className="w-[150px]">FEEDBACK</TableHead>
+                        <TableHead className="min-w-[100px]">DATE</TableHead>
+                        <TableHead className="min-w-[300px]">CLIENT DETAILS</TableHead>
+                        <TableHead className="min-w-[150px]">SOCIALS MISSING</TableHead>
+                        <TableHead className="min-w-[300px]">PAIN POINTS</TableHead>
+                        <TableHead className="min-w-[200px]">FEEDBACK</TableHead>
                         <TableHead className="w-[120px] text-right">ACTIONS</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -533,14 +533,14 @@ export default function ScraperPage() {
                           <TableRow key={row.id}>
                             <TableCell className="text-center">{index + 1}</TableCell>
                             <TableCell>{row.date}</TableCell>
-                            <TableCell className="max-w-xs align-top">
+                            <TableCell className="align-top">
                                 <div className="font-semibold text-base">{row.contact.name || 'Unnamed Contact'}</div>
                                 <p className="text-xs text-muted-foreground line-clamp-3 my-2">{row.contact.summary}</p>
                                 <div className="text-xs space-y-1.5 mt-2">
-                                    <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails?.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
-                                    <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers?.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
-                                    <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks?.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
-                                    <div className="flex items-center gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
+                                    <div className="flex items-start gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground mt-0.5" /> <div className="flex flex-col gap-y-1">{row.contact.emails?.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-start gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground mt-0.5" /> <div className="flex flex-col gap-y-1">{row.contact.phoneNumbers?.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-start gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground mt-0.5" /><div className="flex flex-col gap-y-1">{row.contact.socialMediaLinks?.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>) || <span className="text-muted-foreground italic">N/A</span>}</div></div>
+                                    <div className="flex items-start gap-1.5 pt-1"><LinkIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground mt-0.5" /><a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Source Link</a></div>
                                 </div>
                             </TableCell>
                             <TableCell className="align-top">
@@ -549,7 +549,7 @@ export default function ScraperPage() {
                                         {missingSocials.map(([key, Icon]) => (
                                             <Tooltip key={key}>
                                                 <TooltipTrigger asChild>
-                                                    <Icon className="h-4 w-4 text-muted-foreground" />
+                                                    <span><Icon className="h-4 w-4 text-muted-foreground" /></span>
                                                 </TooltipTrigger>
                                                 <TooltipContent>
                                                     <p>Missing {key.charAt(0).toUpperCase() + key.slice(1)}</p>
@@ -643,5 +643,3 @@ export default function ScraperPage() {
     </TooltipProvider>
   );
 }
-
-    

@@ -23,7 +23,7 @@ import {
 
 type Platform = 'email' | 'whatsapp';
 
-const ReplyPart = ({ label, content, platform }: { label: string; content?: string; platform: Platform }) => {
+const ReplyPart = ({ label, content }: { label: string; content?: string; }) => {
   const { toast } = useToast();
   if (!content) return null;
 
@@ -31,28 +31,20 @@ const ReplyPart = ({ label, content, platform }: { label: string; content?: stri
     navigator.clipboard.writeText(content);
     toast({ title: 'Copied to Clipboard', description: `${label} copied!` });
   };
-  
-  const getRecipient = () => {
-      if (platform === 'email') return 'mailto:';
-      if (platform === 'whatsapp') return `https://wa.me/`;
-      return '';
-  }
 
   return (
     <div className="grid gap-2">
         <div className="flex justify-between items-center">
             <label className="text-sm font-semibold text-muted-foreground">{label}</label>
-            <div className='flex gap-2'>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopyToClipboard}>
-                    <Copy className="h-4 w-4" />
-                </Button>
-            </div>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopyToClipboard}>
+                <Copy className="h-4 w-4" />
+            </Button>
         </div>
       <Textarea
         value={content}
         readOnly
         className="w-full resize-none text-sm whitespace-pre-wrap"
-        rows={label === 'Body' ? 8 : 1}
+        rows={label === 'Body' ? 8 : (label === 'Subject' ? 1 : 2)}
       />
     </div>
   );
@@ -125,11 +117,16 @@ export default function ReplyCrafter() {
 
   const getRecipientInfo = () => {
     if (!activeContact) return null;
+    let recipient, action;
     if (platform === 'email') {
-        return activeContact.contact.emails?.[0] ? `To: ${activeContact.contact.emails[0]}` : 'No email found';
+        recipient = activeContact.contact.emails?.[0];
+        action = recipient ? `mailto:${recipient}` : '#';
+        return recipient ? <a href={action} className="text-primary hover:underline">To: {recipient}</a> : 'No email found';
     }
     if (platform === 'whatsapp') {
-        return activeContact.contact.phoneNumbers?.[0] ? `To: ${activeContact.contact.phoneNumbers[0]}` : 'No phone number found';
+        recipient = activeContact.contact.phoneNumbers?.[0];
+        action = recipient ? `https://wa.me/${recipient.replace(/\D/g, '')}` : '#';
+        return recipient ? <a href={action} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">To: {recipient}</a> : 'No phone number found';
     }
     return null;
   }
@@ -141,7 +138,7 @@ export default function ReplyCrafter() {
           <h1 className="ml-2 text-lg font-semibold">Reply Crafter</h1>
         </header>
         <div className="flex-1 overflow-y-auto">
-            <div className="p-4 md:p-8 lg:p-12 h-full flex flex-col">
+            <div className="p-4 md:p-8 h-full flex flex-col">
             {!activeContact ? (
                 <div className="flex-1 flex items-center justify-center text-center">
                     <div className="flex flex-col items-center gap-4">
@@ -187,7 +184,7 @@ export default function ReplyCrafter() {
                     <h3 className="text-base font-semibold mb-2">Choose Platform</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Button
-                        variant="outline"
+                        variant={platform === 'email' ? 'default' : 'outline'}
                         onClick={() => handleCraftReply('email')}
                         disabled={isCrafting}
                     >
@@ -195,7 +192,7 @@ export default function ReplyCrafter() {
                         Email
                     </Button>
                     <Button
-                        variant="outline"
+                        variant={platform === 'whatsapp' ? 'default' : 'outline'}
                         onClick={() => handleCraftReply('whatsapp')}
                         disabled={isCrafting}
                     >
@@ -215,9 +212,9 @@ export default function ReplyCrafter() {
                 {generatedReply && (
                     <div className="space-y-4">
                         <h3 className="text-base font-semibold text-primary">{getRecipientInfo()}</h3>
-                        {platform === 'email' && <ReplyPart label="Subject" content={generatedReply.subject} platform={platform} />}
-                        <ReplyPart label="Body" content={generatedReply.body} platform={platform} />
-                        <ReplyPart label="Call To Action" content={generatedReply.callToAction} platform={platform} />
+                        {platform === 'email' && <ReplyPart label="Subject" content={generatedReply.subject} />}
+                        <ReplyPart label="Body" content={generatedReply.body} />
+                        <ReplyPart label="Call To Action" content={generatedReply.callToAction} />
                     </div>
                 )}
                 </div>
