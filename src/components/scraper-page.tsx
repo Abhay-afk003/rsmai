@@ -321,8 +321,8 @@ export default function ScraperPage() {
               <CardDescription>Scrape contact details based on your Ideal Customer Profile (ICP).</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[180px_1fr_1fr_auto] gap-4 items-end">
-                  <div className="grid gap-2">
+              <div className="flex flex-col lg:flex-row gap-4 items-end">
+                  <div className="grid gap-2 w-full lg:w-[200px]">
                       <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
                       <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
                           <SelectTrigger id="scrape-source">
@@ -340,7 +340,7 @@ export default function ScraperPage() {
                       </Select>
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 flex-1 w-full">
                       <label htmlFor="query-input" className="text-sm font-medium">{currentSourceConfig.label}</label>
                       <Input 
                           id="query-input"
@@ -352,7 +352,7 @@ export default function ScraperPage() {
                       />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 flex-1 w-full">
                       <label htmlFor="location-input" className="text-sm font-medium">Location (Optional)</label>
                       <Input 
                           id="location-input"
