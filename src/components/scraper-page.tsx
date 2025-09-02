@@ -313,9 +313,9 @@ export default function ScraperPage() {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full w-full">
         <div className="flex-1 space-y-4 md:space-y-6 p-4 md:p-6">
-          <div className="border rounded-lg">
+          <Card>
             <CardHeader>
               <CardTitle>Contact Scraping</CardTitle>
               <CardDescription>Scrape contact details based on your Ideal Customer Profile (ICP).</CardDescription>
@@ -446,7 +446,7 @@ export default function ScraperPage() {
               )}
               
             </CardContent>
-          </div>
+          </Card>
 
           <Card>
                 <CardHeader className="flex-col md:flex-row items-start md:items-center justify-between gap-4">
