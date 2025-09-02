@@ -11,14 +11,16 @@ export const AnalyzeClientPainPointsInputSchema = z.object({
 });
 export type AnalyzeClientPainPointsInput = z.infer<typeof AnalyzeClientPainPointsInputSchema>;
 
+export const PainPointSchema = z.object({
+  category: z.string().describe('The category of the pain point.'),
+  description: z.string().describe('A direct, concise description of the pain point that can be used in a conversation.'),
+  suggestedService: z.string().describe('The specific digital marketing service that can be pitched to solve this pain point.')
+});
+export type PainPoint = z.infer<typeof PainPointSchema>;
+
+
 export const AnalyzeClientPainPointsOutputSchema = z.object({
-  painPoints: z.array(
-    z.object({
-      category: z.string().describe('The category of the pain point.'),
-      description: z.string().describe('A direct, concise description of the pain point that can be used in a conversation.'),
-      suggestedService: z.string().describe('The specific digital marketing service that can be pitched to solve this pain point.')
-    })
-  ).describe('The identified pain points categorized by category and description.'),
+  painPoints: z.array(PainPointSchema).describe('The identified pain points categorized by category and description.'),
 });
 export type AnalyzeClientPainPointsOutput = z.infer<typeof AnalyzeClientPainPointsOutputSchema>;
 
@@ -46,3 +48,16 @@ export const ScrapeWebsiteMultiOutputSchema = z.object({
     results: z.array(ScrapedResultSchema).describe("An array of scraped contact results."),
 });
 export type ScrapeWebsiteMultiOutput = z.infer<typeof ScrapeWebsiteMultiOutputSchema>;
+
+// Schemas for craft-outreach-reply.ts
+export const CraftOutreachReplyInputSchema = z.object({
+    platform: z.enum(['email', 'whatsapp']),
+    contact: ScrapedResultSchema,
+    painPoints: z.array(PainPointSchema),
+});
+export type CraftOutreachReplyInput = z.infer<typeof CraftOutreachReplyInputSchema>;
+
+export const CraftOutreachReplyOutputSchema = z.object({
+    message: z.string().describe("The generated outreach message, formatted for the specified platform."),
+});
+export type CraftOutreachReplyOutput = z.infer<typeof CraftOutreachReplyOutputSchema>;

@@ -1,8 +1,9 @@
 "use server";
 
 import { analyzeClientPainPoints } from "@/ai/flows/analyze-client-pain-points";
+import { craftOutreachReply } from "@/ai/flows/craft-outreach-reply";
 import { scrapeWebsite } from "@/ai/flows/scrape-website";
-import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteMultiOutput, ScrapeWebsiteInput } from "@/ai/schemas";
+import type { AnalyzeClientPainPointsOutput, CraftOutreachReplyInput, CraftOutreachReplyOutput, ScrapeWebsiteInput, ScrapeWebsiteMultiOutput } from "@/ai/schemas";
 
 type PainPointAnalysisResult = {
   success: boolean;
@@ -45,6 +46,23 @@ export async function performScrape(input: ScrapeWebsiteInput): Promise<ScrapeRe
     } catch (error) {
         console.error("Website scraping failed:", error);
         const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during scraping.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+type CraftReplyResult = {
+    success: boolean;
+    data?: CraftOutreachReplyOutput;
+    error?: string;
+};
+
+export async function performCraftReply(input: CraftOutreachReplyInput): Promise<CraftReplyResult> {
+    try {
+        const result = await craftOutreachReply(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Reply crafting failed:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during reply crafting.";
         return { success: false, error: errorMessage };
     }
 }

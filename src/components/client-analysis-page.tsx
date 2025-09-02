@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, FileDown, User, Link as LinkIcon, Phone, Mail, Users, Trash2, MapPin } from "lucide-react";
+import { Loader2, Download, BrainCircuit, Search, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, FileDown, User, Link as LinkIcon, Phone, Mail, Users, Trash2, MapPin, MessageCircle, Bot } from "lucide-react";
 import { performPainPointAnalysis, performScrape } from "@/app/actions";
 import type { AnalyzeClientPainPointsOutput, ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,10 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
+import { SidebarTrigger } from "./ui/sidebar";
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
 
-type AnalysisHistoryItem = {
+export type AnalysisHistoryItem = {
   id: string;
   date: string;
   scrapeQuery: string;
@@ -42,7 +43,11 @@ const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; i
 
 type ScrapedItem = ScrapedResult & { id: string };
 
-export default function ClientAnalysisPage() {
+type ClientAnalysisPageProps = {
+  onSelectContact: (contact: AnalysisHistoryItem | null) => void;
+};
+
+export default function ClientAnalysisPage({ onSelectContact }: ClientAnalysisPageProps) {
   const [scrapeQuery, setScrapeQuery] = useState("");
   const [scrapeLocation, setScrapeLocation] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
@@ -256,6 +261,10 @@ export default function ClientAnalysisPage() {
     doc.save('rsm-contact-analysis.pdf');
   };
 
+  const handleCraftReply = (item: AnalysisHistoryItem) => {
+    onSelectContact(item);
+  };
+
   const currentSourceConfig = sourceConfig[scrapeSource];
 
   return (
@@ -264,6 +273,11 @@ export default function ClientAnalysisPage() {
         <header className="px-4 lg:px-6 h-14 flex items-center border-b">
           <BrainCircuit className="h-6 w-6 text-primary" />
           <h1 className="ml-2 text-lg font-semibold">RSM Insights AI</h1>
+          <div className="ml-auto">
+            <SidebarTrigger>
+                <Bot />
+            </SidebarTrigger>
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-8 lg:p-12">
           <div className="grid gap-8 max-w-7xl mx-auto">
@@ -515,25 +529,39 @@ export default function ClientAnalysisPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon">
-                                            <Trash2 className="h-4 w-4 text-destructive/70" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                        This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                <div className="flex justify-end items-center">
+                                    {row.painPoints && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => handleCraftReply(row)}>
+                                                <MessageCircle className="h-4 w-4 text-primary/70" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Craft Outreach Reply</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    )}
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                                <Trash2 className="h-4 w-4 text-destructive/70" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                            This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -626,6 +654,14 @@ export default function ClientAnalysisPage() {
                                         )}
                                     </div>
                                 </CardContent>
+                                {row.painPoints && (
+                                <CardFooter>
+                                    <Button size="sm" className="w-full" onClick={() => handleCraftReply(row)}>
+                                    <MessageCircle className="mr-2 h-4 w-4" />
+                                    Craft Outreach Reply
+                                    </Button>
+                                </CardFooter>
+                                )}
                             </Card>
                         ))
                     ) : (
