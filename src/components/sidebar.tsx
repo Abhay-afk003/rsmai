@@ -3,17 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrainCircuit } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { navItems } from "@/lib/nav-items";
 
-
-const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
+export const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
   const pathname = usePathname();
 
   const handleLinkClick = () => {
@@ -48,36 +42,25 @@ const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 
 export default function Sidebar() {
     const isMobile = useIsMobile();
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
-    
+
+    // Render nothing on mobile, the hamburger menu is handled in layout.tsx
     if (isMobile) {
-        return (
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0"
-                    >
-                        <Menu className="h-5 w-5" />
-                        <span className="sr-only">Toggle navigation menu</span>
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col">
-                    <nav className="grid gap-2 text-lg font-medium">
-                        <Link
-                            href="#"
-                            className="flex items-center gap-2 text-lg font-semibold mb-4"
-                        >
-                            <BrainCircuit className="h-6 w-6 text-primary" />
-                            <span>RSM Insights</span>
-                        </Link>
-                        <NavContent onLinkClick={() => setIsSheetOpen(false)} />
-                    </nav>
-                </SheetContent>
-            </Sheet>
-        );
+        return null;
     }
 
-    return <NavContent />;
+    return (
+        <div className="hidden border-r bg-muted/40 md:block">
+            <div className="flex h-full max-h-screen flex-col gap-2">
+            <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+                <Link href="/" className="flex items-center gap-2 font-semibold">
+                <BrainCircuit className="h-6 w-6 text-primary" />
+                <span className="">RSM Insights</span>
+                </Link>
+            </div>
+            <div className="flex-1">
+                <NavContent />
+            </div>
+            </div>
+        </div>
+    );
 }
