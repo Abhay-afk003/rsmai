@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRouter } from "next/navigation";
+
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
 
@@ -43,11 +45,7 @@ const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; i
 
 type ScrapedItem = ScrapedResult & { id: string };
 
-type ClientAnalysisPageProps = {
-  onSelectContact: (contact: AnalysisHistoryItem | null) => void;
-};
-
-export default function ClientAnalysisPage({ onSelectContact }: ClientAnalysisPageProps) {
+export default function ClientAnalysisPage() {
   const [scrapeQuery, setScrapeQuery] = useState("");
   const [scrapeLocation, setScrapeLocation] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
@@ -56,6 +54,7 @@ export default function ClientAnalysisPage({ onSelectContact }: ClientAnalysisPa
   const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
   const isPending = isScraping || isAnalyzing;
+  const router = useRouter();
 
   const { toast } = useToast();
 
@@ -262,7 +261,8 @@ export default function ClientAnalysisPage({ onSelectContact }: ClientAnalysisPa
   };
 
   const handleCraftReply = (item: AnalysisHistoryItem) => {
-    onSelectContact(item);
+    sessionStorage.setItem('activeContact', JSON.stringify(item));
+    router.push('/reply-crafter');
   };
 
   const currentSourceConfig = sourceConfig[scrapeSource];
@@ -272,7 +272,7 @@ export default function ClientAnalysisPage({ onSelectContact }: ClientAnalysisPa
       <div className="flex flex-col h-screen">
         <header className="px-4 lg:px-6 h-14 flex items-center border-b shrink-0">
           <BrainCircuit className="h-6 w-6 text-primary" />
-          <h1 className="ml-2 text-lg font-semibold">RSM Insights AI</h1>
+          <h1 className="ml-2 text-lg font-semibold">Client Analysis</h1>
         </header>
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="p-4 md:p-8 lg:p-12 flex-shrink-0">
