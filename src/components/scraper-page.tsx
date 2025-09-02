@@ -68,7 +68,7 @@ export default function ScraperPage() {
     startScrapingTransition(async () => {
       const scrapeResult = await performScrape(scrapeInput);
       if (scrapeResult.success && scrapeResult.data) {
-        setScrapedResults(scrapeResult.data.results.map(r => ({ ...r, id: new Date().toISOString() + Math.random() })));
+        setScrapedResults(scrapeResult.data.results.map((r, index) => ({ ...r, id: `${Date.now()}-${index}` })));
         toast({
           title: "Scraping Complete",
           description: `${scrapeResult.data.results.length} contacts found. Select which ones to add to your research.`,
@@ -83,7 +83,7 @@ export default function ScraperPage() {
     });
   };
 
-  const handleAddToHistory = (result: ScrapedItem) => {
+  const handleAddToHistory = (resultToAdd: ScrapedItem) => {
     let currentHistory: AnalysisHistoryItem[] = [];
     try {
         const storedHistory = sessionStorage.getItem("analysisHistory");
@@ -95,13 +95,23 @@ export default function ScraperPage() {
         currentHistory = [];
     }
     
+    // Prevent adding duplicates
+    if (currentHistory.some(item => item.id === resultToAdd.id)) {
+        toast({
+            title: "Duplicate",
+            description: "This contact is already in your research history.",
+            variant: "destructive"
+        });
+        return;
+    }
+
     const newHistoryItem: AnalysisHistoryItem = {
-      id: result.id,
+      id: resultToAdd.id,
       date: new Date().toLocaleDateString(),
       scrapeQuery: scrapeQuery || "N/A",
       scrapeSource: scrapeSource,
       ...(scrapeLocation.trim() && { scrapeLocation: scrapeLocation.trim() }),
-      contact: result,
+      contact: resultToAdd,
     };
 
     const updatedHistory = [newHistoryItem, ...currentHistory];
@@ -109,17 +119,15 @@ export default function ScraperPage() {
     try {
         sessionStorage.setItem("analysisHistory", JSON.stringify(updatedHistory));
         setHistoryCount(updatedHistory.length);
+        setScrapedResults(prev => prev.filter(r => r.id !== resultToAdd.id));
+        toast({
+            title: "Contact Added",
+            description: `${resultToAdd.name || 'Unnamed contact'} has been added to Market Research.`,
+        });
+        router.push('/market-research');
     } catch (error) {
         toast({ title: "Error", description: "Could not save to research history.", variant: "destructive"});
-        return;
     }
-
-    setScrapedResults(prev => prev.filter(r => r.id !== result.id));
-    toast({
-      title: "Contact Added",
-      description: `${result.name || 'Unnamed contact'} has been added to Market Research.`,
-    });
-    router.push('/market-research');
   };
 
   const currentSourceConfig = sourceConfig[scrapeSource];
