@@ -49,10 +49,14 @@ const NavContent = () => {
 export default function Sidebar() {
     const isMobile = useIsMobile();
 
+    if (isMobile === undefined) {
+        return null;
+    }
+
     if (isMobile) {
         return (
             <Sheet>
-                <header className="sticky top-0 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                     <SheetTrigger asChild>
                         <Button size="icon" variant="outline" className="sm:hidden">
                             <Menu className="h-5 w-5" />
@@ -73,7 +77,7 @@ export default function Sidebar() {
 
     return (
         <TooltipProvider>
-            <aside className="hidden h-screen w-14 flex-col items-center border-r bg-background sm:flex">
+            <aside className="fixed left-0 top-0 z-10 hidden h-screen w-14 flex-col items-center border-r bg-background sm:flex">
                 <div className="flex h-14 items-center justify-center border-b">
                     <Link href="/" className="group">
                         <BrainCircuit className="h-7 w-7 text-sidebar-foreground transition-colors group-hover:text-primary" />

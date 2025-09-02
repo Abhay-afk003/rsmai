@@ -3,7 +3,6 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import Sidebar from '@/components/sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 
 export const metadata: Metadata = {
@@ -26,7 +25,7 @@ export default function RootLayout({
       <body className={cn("font-body antialiased", "min-h-screen bg-background font-sans")}>
           <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Sidebar />
-            <main className="flex flex-1 flex-col sm:gap-4 sm:py-4 sm:pl-14">
+            <main className="flex flex-1 flex-col gap-4 py-4 sm:pl-14">
               {children}
             </main>
           </div>
