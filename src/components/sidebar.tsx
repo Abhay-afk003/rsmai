@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BrainCircuit, Search, MessageCircle, ClipboardList } from "lucide-react";
+import { BrainCircuit, Search, MessageCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
-    { href: "/", label: "Scraper", icon: Search },
-    { href: "/market-research", label: "Market Research", icon: ClipboardList },
+    { href: "/", label: "Scraper & Research", icon: Search },
     { href: "/reply-crafter", label: "Reply Crafter", icon: MessageCircle },
 ];
 

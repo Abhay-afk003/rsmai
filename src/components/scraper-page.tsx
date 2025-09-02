@@ -1,18 +1,24 @@
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, ArrowRight } from "lucide-react";
-import { performScrape } from "@/app/actions";
-import type { ScrapeWebsiteInput, ScrapedResult } from "@/ai/schemas";
+import { Loader2, BrainCircuit, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, ArrowRight, Download, Search, MapPin, Trash2, FileDown, MessageCircle } from "lucide-react";
+import { performScrape, performPainPointAnalysis } from "@/app/actions";
+import type { ScrapeWebsiteInput, ScrapedResult, AnalyzeClientPainPointsOutput } from "@/ai/schemas";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRouter } from "next/navigation";
-import { AnalysisHistoryItem } from "./market-research-page";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
+
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
 
@@ -26,6 +32,17 @@ const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; i
     youtube: { label: "YouTube Search", placeholder: "e.g., 'tech review channels'", icon: Youtube },
 }
 
+export type AnalysisHistoryItem = {
+    id: string;
+    date: string;
+    scrapeQuery: string;
+    scrapeSource: ScrapeSource;
+    scrapeLocation?: string;
+    contact: ScrapedResult;
+    isAnalyzingPainPoints?: boolean;
+    painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
+};
+
 type ScrapedItem = ScrapedResult & { id: string };
 
 export default function ScraperPage() {
@@ -33,8 +50,10 @@ export default function ScraperPage() {
   const [scrapeLocation, setScrapeLocation] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
+  const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
+  
   const [isScraping, startScrapingTransition] = useTransition();
-  const [historyCount, setHistoryCount] = useState(0);
+  const [isAnalyzing, startAnalyzingTransition] = useTransition();
 
   const router = useRouter();
   const { toast } = useToast();
@@ -43,14 +62,21 @@ export default function ScraperPage() {
     try {
       const storedHistory = sessionStorage.getItem("analysisHistory");
       if (storedHistory) {
-        const parsedHistory = JSON.parse(storedHistory);
-        setHistoryCount(parsedHistory.length);
+        setHistory(JSON.parse(storedHistory));
       }
     } catch (error) {
-        console.error("Failed to parse history from sessionStorage", error);
-        sessionStorage.removeItem("analysisHistory");
+      console.error("Failed to parse history from sessionStorage", error);
+      sessionStorage.removeItem("analysisHistory");
     }
   }, []);
+
+  useEffect(() => {
+    try {
+        sessionStorage.setItem("analysisHistory", JSON.stringify(history));
+    } catch (error) {
+        console.error("Failed to save history to sessionStorage", error);
+    }
+  }, [history]);
 
   const handleScrape = () => {
     if (!scrapeQuery.trim()) {
@@ -95,7 +121,6 @@ export default function ScraperPage() {
         currentHistory = [];
     }
     
-    // Prevent adding duplicates
     if (currentHistory.some(item => item.id === resultToAdd.id)) {
         toast({
             title: "Duplicate",
@@ -117,27 +142,165 @@ export default function ScraperPage() {
     const updatedHistory = [newHistoryItem, ...currentHistory];
 
     try {
-        sessionStorage.setItem("analysisHistory", JSON.stringify(updatedHistory));
-        setHistoryCount(updatedHistory.length);
+        setHistory(updatedHistory);
         setScrapedResults(prev => prev.filter(r => r.id !== resultToAdd.id));
         toast({
             title: "Contact Added",
             description: `${resultToAdd.name || 'Unnamed contact'} has been added to Market Research.`,
         });
-        router.push('/market-research');
     } catch (error) {
         toast({ title: "Error", description: "Could not save to research history.", variant: "destructive"});
     }
   };
 
+  const handlePainPointAnalysis = (id: string, clientData: string) => {
+    setHistory(prev => prev.map(item => item.id === id ? { ...item, isAnalyzingPainPoints: true } : item));
+
+    startAnalyzingTransition(async () => {
+        const result = await performPainPointAnalysis(clientData);
+        if (result.success && result.data) {
+            setHistory(prev => prev.map(item => item.id === id ? { ...item, painPoints: result.data!.painPoints, isAnalyzingPainPoints: false } : item));
+            toast({
+                title: "Pain Point Analysis Complete",
+                description: "Direct pain points have been identified.",
+            });
+        } else {
+            setHistory(prev => prev.map(item => item.id === id ? { ...item, isAnalyzingPainPoints: false } : item));
+            toast({
+                title: "Analysis Failed",
+                description: result.error || "An unknown error occurred.",
+                variant: "destructive",
+            });
+        }
+    });
+  };
+
+  const deleteHistoryItem = (id: string) => {
+    setHistory(prev => prev.filter(item => item.id !== id));
+    toast({
+        title: "Contact Removed",
+        description: "The contact has been removed from your research history.",
+    });
+  };
+
+  const clearHistory = () => {
+      setHistory([]);
+      toast({
+          title: "History Cleared",
+          description: "All contacts have been removed from your research history.",
+      });
+  };
+
+  const downloadCSV = () => {
+    if (history.length === 0) {
+      toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
+      return;
+    }
+    const header = "COUNT,DATE,CLIENT DETAILS,SOCIALS MISSING,PAIN POINTS,FEEDBACK\n";
+    const rows = history.map((row, index) => {
+      const { contact, painPoints } = row;
+      const count = index + 1;
+      const date = row.date;
+      const clientDetails = `"${[
+        `Name: ${contact.name || 'N/A'}`,
+        `Query: ${row.scrapeQuery}`,
+        `Location: ${row.scrapeLocation || 'N/A'}`,
+        `Source: ${row.scrapeSource}`,
+        `Source URL: ${contact.sourceUrl}`,
+        `Summary: ${(contact.summary || "").replace(/"/g, '""')}`,
+        `Emails: ${(contact.emails || []).join(", ")}`,
+        `Phones: ${(contact.phoneNumbers || []).join(", ")}`,
+        `Socials: ${(contact.socialMediaLinks || []).join(", ")}`
+      ].join('\n')}"`;
+      
+      const socialsMissing = `""`; // Placeholder for manual entry
+      const painPointsStr = `"${(painPoints || []).map(p => `[${p.category}] ${p.description}\nPlan: ${p.suggestedService}`).join('\n\n').replace(/"/g, '""')}"`;
+      const feedback = `""`; // Placeholder for manual entry
+
+      return [count, date, clientDetails, socialsMissing, painPointsStr, feedback].join(",");
+    }).join("\n");
+
+    const csvContent = header + rows;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "market-research-pain-points.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const downloadPDF = () => {
+    if (history.length === 0) {
+        toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
+        return;
+    }
+
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("RSM Insights AI - Research History", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Report generated on ${new Date().toLocaleDateString()}`, 14, 29);
+
+    const tableData = history.map(row => {
+        const { contact, painPoints } = row;
+        const painPointsText = (painPoints || []).map(p => `[${p.category}] ${p.description}\nPlan: ${p.suggestedService}`).join('\n\n');
+        const contactInfo = [
+            `Query: ${row.scrapeQuery}`,
+            `Location: ${row.scrapeLocation || 'N/A'}`,
+            `Source: ${row.scrapeSource}`,
+            (contact.emails || []).join(', '),
+            (contact.phoneNumbers || []).join(', '),
+            (contact.socialMediaLinks || []).join(', '),
+        ].filter(Boolean).join('\n');
+
+        return [
+            row.date,
+            contact.name || 'N/A',
+            contactInfo,
+            painPointsText || "Not analyzed yet."
+        ];
+    });
+
+    (doc as any).autoTable({
+        head: [['Date', 'Name', 'Contact Info', 'Pain Point Analysis']],
+        body: tableData,
+        startY: 35,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 45 },
+            3: { cellWidth: 'auto' },
+        },
+        didParseCell: function(data: any) {
+            if (data.column.dataKey === 3) {
+                data.cell.styles.fontStyle = 'italic';
+            }
+        }
+    });
+
+    doc.save('rsm-contact-analysis.pdf');
+  };
+
+  const handleCraftReply = (item: AnalysisHistoryItem) => {
+    sessionStorage.setItem('activeContact', JSON.stringify(item));
+    router.push('/reply-crafter');
+  };
+
   const currentSourceConfig = sourceConfig[scrapeSource];
-  const isPending = isScraping;
+  const isPending = isScraping || isAnalyzing;
 
   return (
+    <TooltipProvider>
     <div className="flex flex-col h-full">
       <header className="px-4 lg:px-6 h-14 flex items-center border-b shrink-0">
         <BrainCircuit className="h-6 w-6 text-primary" />
-        <h1 className="ml-2 text-lg font-semibold">Scraper</h1>
+        <h1 className="ml-2 text-lg font-semibold">Prospecting</h1>
       </header>
 
       <main className="flex-1 p-4 md:p-8 lg:p-12 space-y-8 overflow-y-auto">
@@ -192,7 +355,7 @@ export default function ScraperPage() {
                     />
                 </div>
                 
-                <Button onClick={handleScrape} disabled={isPending} className="w-full lg:w-auto">
+                <Button onClick={handleScrape} disabled={isScraping} className="w-full lg:w-auto">
                   {isScraping ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -206,7 +369,8 @@ export default function ScraperPage() {
 
             {scrapedResults.length > 0 && (
                 <div className="border rounded-lg p-4">
-                    <h3 className="font-semibold mb-2">Scraped Contacts</h3>
+                    <h3 className="font-semibold mb-2">Scraped Contacts ({scrapedResults.length} found)</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Select contacts to add them to your research history below.</p>
                     <ScrollArea className="h-72">
                       <Accordion type="single" collapsible className="w-full pr-4">
                           {scrapedResults.map((result) => (
@@ -269,17 +433,274 @@ export default function ScraperPage() {
                     </ScrollArea>
                 </div>
             )}
-            {historyCount > 0 && (
-                <div className="flex justify-end">
-                    <Button onClick={() => router.push('/market-research')}>
-                        Go to Market Research ({historyCount} contacts)
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </div>
-            )}
+            
           </CardContent>
         </Card>
+
+        <Card>
+              <CardHeader className="flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <CardTitle>Research History</CardTitle>
+                  <CardDescription>
+                    A log of all your scraped contacts. Results are saved in your browser session.
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Button onClick={downloadCSV} variant="outline" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download CSV
+                    </Button>
+                    <Button onClick={downloadPDF} variant="outline" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Download PDF
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={history.length === 0} className="w-full sm:w-auto">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Clear All
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete your entire research history from this session.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={clearHistory}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Desktop Table */}
+                <div className="border rounded-md hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Date</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Contact Info</TableHead>
+                        <TableHead>Pain Point Analysis</TableHead>
+                        <TableHead className="w-[50px] text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {history.length > 0 ? (
+                        history.map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell>{row.date}</TableCell>
+                            <TableCell className="max-w-xs">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="font-semibold cursor-pointer hover:underline truncate">{row.contact.name || 'Unnamed Contact'}</div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-md bg-card border-border p-4">
+                                        <p className="font-bold mb-2">{row.contact.name}</p>
+                                        <p className="text-card-foreground whitespace-pre-wrap break-words">{row.contact.summary}</p>
+                                        <a href={row.contact.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-2 block truncate">
+                                            Source: {row.contact.sourceUrl}
+                                        </a>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                    <MapPin className="h-3 w-3"/>
+                                    <span className="italic">"{row.scrapeQuery}" in {row.scrapeLocation || row.scrapeSource}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1.5 text-xs">
+                                {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline">{e}</a>)}</div></div>}
+                                {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
+                                {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {row.isAnalyzingPainPoints ? (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span>Analyzing...</span>
+                                </div>
+                              ) : row.painPoints ? (
+                                <Accordion type="single" collapsible className="w-full">
+                                  <AccordionItem value="item-1">
+                                    <AccordionTrigger>
+                                      <div className="flex gap-1.5 flex-wrap max-w-md">
+                                          {row.painPoints.slice(0, 3).map((p, i) => (
+                                              <Badge key={i} variant="outline" className="cursor-pointer border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
+                                          ))}
+                                          {row.painPoints.length > 3 && <Badge variant="secondary">+{row.painPoints.length-3} more</Badge>}
+                                      </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      <div className="space-y-4">
+                                        {row.painPoints.map((p, i) => (
+                                          <div key={i} className="text-xs">
+                                              <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
+                                              <p className="font-semibold text-accent mt-1">Plan of Action: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              ) : (
+                                <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
+                                  <Search className="mr-2 h-4 w-4" />
+                                  Analyze Pain Points
+                                </Button>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex justify-end items-center">
+                                    {row.painPoints && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => handleCraftReply(row)}>
+                                                <MessageCircle className="h-4 w-4 text-primary/70" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Craft Outreach Reply</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    )}
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                                <Trash2 className="h-4 w-4 text-destructive/70" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                            This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                            No research history yet. Add a contact from the Scraper page to get started.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* Mobile Cards */}
+                <div className="grid gap-4 md:hidden">
+                    {history.length > 0 ? (
+                        history.map(row => (
+                            <Card key={row.id}>
+                                <CardHeader>
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <CardTitle className="text-base truncate">{row.contact.name || 'Unnamed Contact'}</CardTitle>
+                                            <CardDescription>{row.date} via {row.scrapeSource}</CardDescription>
+                                        </div>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
+                                                    <Trash2 className="h-4 w-4 text-destructive/70" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Contact?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                This will permanently remove "{row.contact.name || 'Unnamed Contact'}" from your history.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => deleteHistoryItem(row.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="grid gap-4 text-sm">
+                                    <div className="flex flex-col gap-2">
+                                        <h4 className="font-semibold">Contact Info</h4>
+                                        <div className="flex flex-col gap-1.5 text-xs">
+                                            {row.contact.emails && row.contact.emails.length > 0 && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.emails.map(e => <a key={e} href={`mailto:${e}`} className="text-primary hover:underline break-all">{e}</a>)}</div></div>}
+                                            {row.contact.phoneNumbers && row.contact.phoneNumbers.length > 0 && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 flex-shrink-0" /> <div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.phoneNumbers.map(p => <a key={p} href={`tel:${p}`} className="text-primary hover:underline">{p}</a>)}</div></div>}
+                                            {row.contact.socialMediaLinks && row.contact.socialMediaLinks.length > 0 && <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 flex-shrink-0" /><div className="flex flex-wrap gap-x-2 gap-y-1">{row.contact.socialMediaLinks.map(l => <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{new URL(l).hostname.replace('www.','')}</a>)}</div></div>}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <h4 className="font-semibold">Pain Point Analysis</h4>
+                                        {row.isAnalyzingPainPoints ? (
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span>Analyzing...</span>
+                                            </div>
+                                        ) : row.painPoints ? (
+                                              <Accordion type="single" collapsible className="w-full">
+                                                <AccordionItem value="item-1">
+                                                    <AccordionTrigger>
+                                                        <div className="flex gap-1.5 flex-wrap">
+                                                            {row.painPoints.slice(0, 2).map((p, i) => (
+                                                                <Badge key={i} variant="outline" className="cursor-pointer border-primary/50 text-primary hover:bg-primary/10">{p.category}</Badge>
+                                                            ))}
+                                                            {row.painPoints.length > 2 && <Badge variant="secondary">+{row.painPoints.length-2} more</Badge>}
+                                                        </div>
+                                                    </AccordionTrigger>
+                                                    <AccordionContent>
+                                                    <div className="space-y-4">
+                                                        {row.painPoints.map((p, i) => (
+                                                        <div key={i} className="text-xs">
+                                                            <p className="font-semibold text-primary">{p.category}: <span className="text-foreground font-normal">{p.description}</span></p>
+                                                            <p className="font-semibold text-accent mt-1">Plan of Action: <span className="text-foreground font-normal">{p.suggestedService}</span></p>
+                                                        </div>
+                                                        ))}
+                                                    </div>
+                                                    </AccordionContent>
+                                                </AccordionItem>
+                                            </Accordion>
+                                        ) : (
+                                            <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
+                                                <Search className="mr-2 h-4 w-4" />
+                                                Analyze Pain Points
+                                            </Button>
+                                        )}
+                                    </div>
+                                </CardContent>
+                                {row.painPoints && (
+                                <CardFooter>
+                                    <Button size="sm" className="w-full" onClick={() => handleCraftReply(row)}>
+                                    <MessageCircle className="mr-2 h-4 w-4" />
+                                    Craft Outreach Reply
+                                    </Button>
+                                </CardFooter>
+                                )}
+                            </Card>
+                        ))
+                    ) : (
+                          <div className="h-24 text-center text-muted-foreground flex items-center justify-center border rounded-md">
+                            No research history yet.
+                        </div>
+                    )}
+                </div>
+              </CardContent>
+            </Card>
       </main>
     </div>
+    </TooltipProvider>
   );
 }
