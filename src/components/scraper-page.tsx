@@ -6,7 +6,7 @@ import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, Twitter, Download, Search, Trash2, FileDown, MessageCircle } from "lucide-react";
+import { Loader2, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, Twitter, Download, Search, Trash2, FileDown, MessageCircle, Send, CheckCheck, RefreshCcw } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
 import type { ScrapeWebsiteInput, ScrapedResult, AnalyzeClientPainPointsOutput, CraftOutreachReplyOutput } from "@/ai/schemas";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { add, format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
 
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
@@ -42,6 +45,13 @@ export type AnalysisHistoryItem = {
     isAnalyzingPainPoints?: boolean;
     painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
     feedback?: string;
+    followUp?: {
+        status: 'awaiting_reply' | 'replied';
+        contactedDate: string;
+        followUpCount: number;
+        nextFollowUpDate?: string;
+        replyDate?: string;
+    };
 };
 export type { CraftOutreachReplyOutput };
 
@@ -188,6 +198,73 @@ export default function ScraperPage() {
   
   const handleFeedbackChange = (id: string, newFeedback: string) => {
     setHistory(prev => prev.map(item => item.id === id ? { ...item, feedback: newFeedback } : item));
+  };
+  
+  const setContacted = (id: string, contactedDate: Date) => {
+      setHistory(prev => prev.map(item => {
+          if (item.id === id) {
+              return {
+                  ...item,
+                  followUp: {
+                      status: 'awaiting_reply',
+                      contactedDate: format(contactedDate, 'yyyy-MM-dd'),
+                      followUpCount: 0,
+                      nextFollowUpDate: format(add(contactedDate, { days: 3 }), 'yyyy-MM-dd'),
+                  }
+              };
+          }
+          return item;
+      }));
+      toast({ title: 'Follow-up set', description: 'Next follow-up scheduled in 3 days.' });
+  };
+
+  const setNextFollowUp = (id: string) => {
+    setHistory(prev => prev.map(item => {
+      if (item.id === id && item.followUp && item.followUp.status === 'awaiting_reply' && item.followUp.followUpCount < 2) {
+        const newFollowUpCount = item.followUp.followUpCount + 1;
+        const daysToAdd = (newFollowUpCount + 1) * 3;
+        return {
+          ...item,
+          followUp: {
+            ...item.followUp,
+            followUpCount: newFollowUpCount,
+            nextFollowUpDate: format(add(new Date(item.followUp.contactedDate), { days: daysToAdd }), 'yyyy-MM-dd'),
+          }
+        };
+      }
+      return item;
+    }));
+    toast({ title: 'Next Follow-up Scheduled' });
+  };
+
+
+  const setReplied = (id: string) => {
+      setHistory(prev => prev.map(item => {
+          if (item.id === id && item.followUp) {
+              return {
+                  ...item,
+                  followUp: {
+                      ...item.followUp,
+                      status: 'replied',
+                      replyDate: format(new Date(), 'yyyy-MM-dd'),
+                      nextFollowUpDate: undefined,
+                  }
+              };
+          }
+          return item;
+      }));
+      toast({ title: 'Prospect Replied!', description: 'Follow-up sequence for this contact has been stopped.' });
+  };
+
+  const resetFollowUp = (id: string) => {
+    setHistory(prev => prev.map(item => {
+        if (item.id === id) {
+            const { followUp, ...rest } = item;
+            return rest;
+        }
+        return item;
+    }));
+    toast({ title: 'Follow-up Reset', description: 'The follow-up status for this contact has been cleared.' });
   };
 
 
@@ -498,6 +575,7 @@ export default function ScraperPage() {
                           <TableHead className="min-w-[150px] px-2">SOCIALS MISSING</TableHead>
                           <TableHead className="min-w-[300px] px-2">PAIN POINTS</TableHead>
                           <TableHead className="min-w-[200px] px-2">FEEDBACK</TableHead>
+                          <TableHead className="min-w-[200px] px-2">FOLLOW-UP STATUS</TableHead>
                           <TableHead className="w-[120px] text-right px-2">ACTIONS</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -582,6 +660,37 @@ export default function ScraperPage() {
                                       onChange={(e) => handleFeedbackChange(row.id, e.target.value)}
                                   />
                               </TableCell>
+                               <TableCell className="align-top px-2 py-4">
+                                  {row.followUp ? (
+                                    <div className="text-xs space-y-2">
+                                      {row.followUp.status === 'replied' ? (
+                                        <div className="flex items-center gap-2">
+                                          <CheckCheck className="h-4 w-4 text-green-500" />
+                                          <span className="font-semibold">Replied on {format(new Date(row.followUp.replyDate!), 'MMM d, yyyy')}</span>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="font-semibold">
+                                              Follow-up {row.followUp.followUpCount + 1}/3 due: {format(new Date(row.followUp.nextFollowUpDate!), 'MMM d, yyyy')}
+                                          </div>
+                                          <p className="text-muted-foreground">
+                                              Initially contacted on {format(new Date(row.followUp.contactedDate), 'MMM d, yyyy')}
+                                          </p>
+                                          {row.followUp.followUpCount < 2 && new Date(row.followUp.nextFollowUpDate!) <= new Date() && (
+                                              <Button size="sm" variant="outline" onClick={() => setNextFollowUp(row.id)}>
+                                                  Set Next
+                                              </Button>
+                                          )}
+                                        </>
+                                      )}
+                                      <Button variant="ghost" size="sm" onClick={() => resetFollowUp(row.id)} className="text-xs p-1 h-auto">
+                                          <RefreshCcw className="mr-1 h-3 w-3" /> Reset
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">Not contacted yet.</span>
+                                  )}
+                              </TableCell>
                               <TableCell className="text-right align-top px-2 py-4">
                                   <div className="flex flex-col gap-1.5 justify-end items-end">
                                       {row.painPoints && (
@@ -590,6 +699,32 @@ export default function ScraperPage() {
                                               Craft Reply
                                           </Button>
                                       )}
+                                       <Popover>
+                                          <PopoverTrigger asChild>
+                                               <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!!row.followUp}>
+                                                  <Send className="mr-2 h-4 w-4" />
+                                                  Contacted
+                                              </Button>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-auto p-0">
+                                              <Calendar
+                                                  mode="single"
+                                                  onSelect={(date) => {
+                                                      if (date) {
+                                                        setContacted(row.id, date);
+                                                        const popoverTrigger = document.querySelector(`[data-radix-collection-item][aria-expanded="true"]`);
+                                                        if (popoverTrigger) (popoverTrigger as HTMLElement).click();
+                                                      }
+                                                  }}
+                                                  initialFocus
+                                              />
+                                          </PopoverContent>
+                                      </Popover>
+
+                                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setReplied(row.id)} disabled={!row.followUp || row.followUp.status === 'replied'}>
+                                          <CheckCheck className="mr-2 h-4 w-4" />
+                                          Replied
+                                      </Button>
                                       <AlertDialog>
                                           <AlertDialogTrigger asChild>
                                               <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive">
@@ -617,7 +752,7 @@ export default function ScraperPage() {
                           })
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                               No research history yet. Add a contact from the scraper above to get started.
                             </TableCell>
                           </TableRow>
