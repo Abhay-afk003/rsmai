@@ -338,7 +338,5 @@ export default function FeedbackLoopPage() {
                 </Card>
             </div>
         </div>
-    )
+    );
 }
-
-    
