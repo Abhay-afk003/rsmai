@@ -271,15 +271,15 @@ export default function ReplyCrafter() {
         setHistory(prev => prev.filter(item => item.id !== id));
         toast({
             title: "Contact Removed",
-            description: "The contact has been removed from your feedback loop.",
+            description: "The contact has been removed from your follow-up loop.",
         });
     };
     
     const clearHistory = () => {
       setHistory([]);
       toast({
-          title: "Feedback Loop Cleared",
-          description: "All contacts have been removed from your feedback loop.",
+          title: "Follow-up Loop Cleared",
+          description: "All contacts have been removed from your follow-up loop.",
       });
     };
 
@@ -317,7 +317,7 @@ export default function ReplyCrafter() {
       <div className="flex flex-col h-full">
         <header className="hidden md:flex px-4 lg:px-6 h-14 items-center border-b shrink-0">
           <BrainCircuit className="h-6 w-6 text-primary" />
-          <h1 className="ml-2 text-lg font-semibold">Reply Crafter & Follow-up Loop</h1>
+          <h1 className="ml-2 text-lg font-semibold">Reply Crafter & Follow-ups</h1>
         </header>
         <div className="flex-1 overflow-y-auto">
             <div className="p-4 md:p-8 h-full flex flex-col gap-6">
@@ -405,7 +405,7 @@ export default function ReplyCrafter() {
               <Card>
                     <CardHeader className="flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div className="flex-1">
-                            <CardTitle>Outreach Follow-ups</CardTitle>
+                            <CardTitle>Outreach Follow-ups (Baki)</CardTitle>
                             <CardDescription>
                                 Track and manage all your active conversations and follow-ups.
                             </CardDescription>
