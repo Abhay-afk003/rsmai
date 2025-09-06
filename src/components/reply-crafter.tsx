@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { performCraftReply } from '@/app/actions';
 import { Textarea } from './ui/textarea';
 import type { ResearchHistoryItem } from './scraper-page';
-import type { CraftOutreachReplyOutput } from '@/ai/schemas';
+import type { CraftOutreachReplyOutput, PainPoint } from '@/ai/schemas';
 import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 
@@ -54,7 +53,7 @@ const ReplyPart = ({ label, content }: { label: string; content?: string; }) => 
 export interface FeedbackLoopItem extends ResearchHistoryItem {
   generatedReply: CraftOutreachReplyOutput;
   platform: Platform;
-  feedback?: string;
+  feedback: string;
   followUp?: {
       status: 'awaiting_reply' | 'replied';
       contactedDate: string;
@@ -99,22 +98,31 @@ export default function ReplyCrafter() {
       const result = await performCraftReply({
         platform,
         contact: activeContact.contact,
-        painPoints: activeContact.painPoints!,
+        painPoints: activeContact.painPoints as PainPoint[],
       });
 
       if (result.success && result.data) {
         setGeneratedReply(result.data);
         
-        // Add to feedback loop
-        const feedbackItem: FeedbackLoopItem = {
-          ...activeContact,
-          generatedReply: result.data,
-          platform,
-        };
-        const feedbackHistory = JSON.parse(sessionStorage.getItem("feedbackLoopHistory") || "[]");
-        if (!feedbackHistory.some((item: FeedbackLoopItem) => item.id === feedbackItem.id)) {
-            sessionStorage.setItem("feedbackLoopHistory", JSON.stringify([feedbackItem, ...feedbackHistory]));
+        try {
+            const feedbackItem: FeedbackLoopItem = {
+              ...activeContact,
+              generatedReply: result.data,
+              platform,
+              feedback: '', 
+            };
+            
+            const storedHistory = sessionStorage.getItem("feedbackLoopHistory");
+            const feedbackHistory: FeedbackLoopItem[] = storedHistory ? JSON.parse(storedHistory) : [];
+            
+            if (!feedbackHistory.some((item) => item.id === feedbackItem.id)) {
+                const newHistory = [feedbackItem, ...feedbackHistory];
+                sessionStorage.setItem("feedbackLoopHistory", JSON.stringify(newHistory));
+            }
+        } catch (e) {
+            console.error("Could not process feedback loop history", e)
         }
+
 
         toast({
           title: 'Reply Crafted & Sent to Feedback Loop',
@@ -255,3 +263,5 @@ export default function ReplyCrafter() {
       </div>
   );
 }
+
+    

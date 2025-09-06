@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { User, Link as LinkIcon, Phone, Mail, Users, Trash2, CheckCheck, RefreshCcw, Send, MessageCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +19,6 @@ type FollowUpStatus = 'due' | 'upcoming' | 'overdue' | 'complete';
 export default function FeedbackLoopPage() {
     const [history, setHistory] = useState<FeedbackLoopItem[]>([]);
     const { toast } = useToast();
-    const router = useRouter();
 
     useEffect(() => {
         try {
@@ -105,7 +103,7 @@ export default function FeedbackLoopPage() {
         setHistory(prev => prev.map(item => {
             if (item.id === id) {
                 const { followUp, ...rest } = item;
-                return rest;
+                return { ...rest, feedback: item.feedback || '' };
             }
             return item;
         }));
@@ -342,3 +340,5 @@ export default function FeedbackLoopPage() {
         </div>
     )
 }
+
+    
