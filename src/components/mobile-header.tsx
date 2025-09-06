@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { BrainCircuit, Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { NavContent } from "@/components/sidebar";
 
@@ -26,6 +26,9 @@ export default function MobileHeader() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col">
+                    <SheetHeader className="text-left">
+                        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                    </SheetHeader>
                     <nav className="grid gap-2 text-lg font-medium">
                         <Link href="/" className="flex items-center gap-2 text-lg font-semibold mb-4" onClick={() => setIsSheetOpen(false)}>
                             <BrainCircuit className="h-6 w-6 text-primary" />
