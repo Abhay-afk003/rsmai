@@ -6,9 +6,9 @@ import "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, Twitter, Download, Search, Trash2, FileDown, MessageCircle, Send, CheckCheck, RefreshCcw } from "lucide-react";
+import { Loader2, User, Link as LinkIcon, Phone, Mail, Users, Globe, MessageSquare, Newspaper, Instagram, Facebook, Linkedin, Youtube, Twitter, Download, Search, Trash2, FileDown, MessageCircle } from "lucide-react";
 import { performScrape, performPainPointAnalysis } from "@/app/actions";
-import type { ScrapeWebsiteInput, ScrapedResult, AnalyzeClientPainPointsOutput, CraftOutreachReplyOutput } from "@/ai/schemas";
+import type { ScrapeWebsiteInput, ScrapedResult, AnalyzeClientPainPointsOutput } from "@/ai/schemas";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -18,10 +18,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { add, format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Calendar } from "./ui/calendar";
-
 
 type ScrapeSource = ScrapeWebsiteInput["source"];
 
@@ -35,7 +31,7 @@ const sourceConfig: Record<ScrapeSource, { label: string; placeholder: string; i
     youtube: { label: "YouTube Search", placeholder: "e.g., 'tech review channels'", icon: Youtube },
 }
 
-export type AnalysisHistoryItem = {
+export type ResearchHistoryItem = {
     id: string;
     date: string;
     scrapeQuery: string;
@@ -44,17 +40,7 @@ export type AnalysisHistoryItem = {
     contact: ScrapedResult;
     isAnalyzingPainPoints?: boolean;
     painPoints?: AnalyzeClientPainPointsOutput["painPoints"];
-    feedback?: string;
-    followUp?: {
-        status: 'awaiting_reply' | 'replied';
-        contactedDate: string;
-        followUpCount: number;
-        nextFollowUpDate?: string;
-        replyDate?: string;
-    };
 };
-export type { CraftOutreachReplyOutput };
-
 
 type ScrapedItem = ScrapedResult & { id: string };
 
@@ -71,7 +57,7 @@ export default function ScraperPage() {
   const [scrapeLocation, setScrapeLocation] = useState("");
   const [scrapeSource, setScrapeSource] = useState<ScrapeSource>("website");
   const [scrapedResults, setScrapedResults] = useState<ScrapedItem[]>([]);
-  const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
+  const [history, setHistory] = useState<ResearchHistoryItem[]>([]);
   
   const [isScraping, startScrapingTransition] = useTransition();
   const [isAnalyzing, startAnalyzingTransition] = useTransition();
@@ -81,19 +67,19 @@ export default function ScraperPage() {
 
   useEffect(() => {
     try {
-      const storedHistory = sessionStorage.getItem("analysisHistory");
+      const storedHistory = sessionStorage.getItem("researchHistory");
       if (storedHistory) {
         setHistory(JSON.parse(storedHistory));
       }
     } catch (error) {
       console.error("Failed to parse history from sessionStorage", error);
-      sessionStorage.removeItem("analysisHistory");
+      sessionStorage.removeItem("researchHistory");
     }
   }, []);
 
   useEffect(() => {
     try {
-        sessionStorage.setItem("analysisHistory", JSON.stringify(history));
+        sessionStorage.setItem("researchHistory", JSON.stringify(history));
     } catch (error) {
         console.error("Failed to save history to sessionStorage", error);
     }
@@ -140,14 +126,13 @@ export default function ScraperPage() {
         return;
     }
   
-    const newHistoryItem: AnalysisHistoryItem = {
+    const newHistoryItem: ResearchHistoryItem = {
       id: resultToAdd.id,
       date: new Date().toLocaleDateString(),
       scrapeQuery: scrapeQuery || "N/A",
       scrapeSource: scrapeSource,
       ...(scrapeLocation.trim() && { scrapeLocation: scrapeLocation.trim() }),
       contact: resultToAdd,
-      feedback: "",
     };
   
     setHistory(prev => [newHistoryItem, ...prev]);
@@ -158,11 +143,14 @@ export default function ScraperPage() {
     });
   };
 
-  const handlePainPointAnalysis = (id: string, clientData: string) => {
+  const handlePainPointAnalysis = (id: string) => {
+    const itemToAnalyze = history.find(item => item.id === id);
+    if (!itemToAnalyze) return;
+
     setHistory(prev => prev.map(item => item.id === id ? { ...item, isAnalyzingPainPoints: true } : item));
 
     startAnalyzingTransition(async () => {
-        const result = await performPainPointAnalysis(clientData);
+        const result = await performPainPointAnalysis(JSON.stringify(itemToAnalyze.contact));
         if (result.success && result.data) {
             setHistory(prev => prev.map(item => item.id === id ? { ...item, painPoints: result.data!.painPoints, isAnalyzingPainPoints: false } : item));
             toast({
@@ -195,85 +183,13 @@ export default function ScraperPage() {
           description: "All contacts have been removed from your research history.",
       });
   };
-  
-  const handleFeedbackChange = (id: string, newFeedback: string) => {
-    setHistory(prev => prev.map(item => item.id === id ? { ...item, feedback: newFeedback } : item));
-  };
-  
-  const setContacted = (id: string, contactedDate: Date) => {
-      setHistory(prev => prev.map(item => {
-          if (item.id === id) {
-              return {
-                  ...item,
-                  followUp: {
-                      status: 'awaiting_reply',
-                      contactedDate: format(contactedDate, 'yyyy-MM-dd'),
-                      followUpCount: 0,
-                      nextFollowUpDate: format(add(contactedDate, { days: 3 }), 'yyyy-MM-dd'),
-                  }
-              };
-          }
-          return item;
-      }));
-      toast({ title: 'Follow-up set', description: 'Next follow-up scheduled in 3 days.' });
-  };
-
-  const setNextFollowUp = (id: string) => {
-    setHistory(prev => prev.map(item => {
-      if (item.id === id && item.followUp && item.followUp.status === 'awaiting_reply' && item.followUp.followUpCount < 2) {
-        const newFollowUpCount = item.followUp.followUpCount + 1;
-        const daysToAdd = (newFollowUpCount + 1) * 3;
-        return {
-          ...item,
-          followUp: {
-            ...item.followUp,
-            followUpCount: newFollowUpCount,
-            nextFollowUpDate: format(add(new Date(item.followUp.contactedDate), { days: daysToAdd }), 'yyyy-MM-dd'),
-          }
-        };
-      }
-      return item;
-    }));
-    toast({ title: 'Next Follow-up Scheduled' });
-  };
-
-
-  const setReplied = (id: string) => {
-      setHistory(prev => prev.map(item => {
-          if (item.id === id && item.followUp) {
-              return {
-                  ...item,
-                  followUp: {
-                      ...item.followUp,
-                      status: 'replied',
-                      replyDate: format(new Date(), 'yyyy-MM-dd'),
-                      nextFollowUpDate: undefined,
-                  }
-              };
-          }
-          return item;
-      }));
-      toast({ title: 'Prospect Replied!', description: 'Follow-up sequence for this contact has been stopped.' });
-  };
-
-  const resetFollowUp = (id: string) => {
-    setHistory(prev => prev.map(item => {
-        if (item.id === id) {
-            const { followUp, ...rest } = item;
-            return rest;
-        }
-        return item;
-    }));
-    toast({ title: 'Follow-up Reset', description: 'The follow-up status for this contact has been cleared.' });
-  };
-
 
   const downloadCSV = () => {
     if (history.length === 0) {
       toast({ title: "No data to download", description: "Please add a contact to history first.", variant: "destructive" });
       return;
     }
-    const header = "COUNT,DATE,CLIENT DETAILS,SOCIALS MISSING,PAIN POINTS,FEEDBACK\n";
+    const header = "COUNT,DATE,CLIENT DETAILS,SOCIALS MISSING,PAIN POINTS\n";
     const rows = history.map((row, index) => {
       const { contact, painPoints } = row;
       const count = index + 1;
@@ -308,9 +224,8 @@ export default function ScraperPage() {
 
       const socialsMissing = `"${missingSocials || 'None'}"`;
       const painPointsStr = `"${(painPoints || []).map(p => `[${p.category}] ${p.description}\nPlan: ${p.suggestedService}`).join('\n\n').replace(/"/g, '""')}"`;
-      const feedback = `"${(row.feedback || '').replace(/"/g, '""')}"`;
 
-      return [count, date, clientDetails, socialsMissing, painPointsStr, feedback].join(",");
+      return [count, date, clientDetails, socialsMissing, painPointsStr].join(",");
     }).join("\n");
 
     const csvContent = header + rows;
@@ -380,7 +295,7 @@ export default function ScraperPage() {
     doc.save('rsm-contact-analysis.pdf');
   };
 
-  const handleCraftReply = (item: AnalysisHistoryItem) => {
+  const handleCraftReply = (item: ResearchHistoryItem) => {
     sessionStorage.setItem('activeContact', JSON.stringify(item));
     router.push('/reply-crafter');
   };
@@ -574,8 +489,6 @@ export default function ScraperPage() {
                           <TableHead className="min-w-[300px] px-2">CLIENT DETAILS</TableHead>
                           <TableHead className="min-w-[150px] px-2">SOCIALS MISSING</TableHead>
                           <TableHead className="min-w-[300px] px-2">PAIN POINTS</TableHead>
-                          <TableHead className="min-w-[200px] px-2">FEEDBACK</TableHead>
-                          <TableHead className="min-w-[200px] px-2">FOLLOW-UP STATUS</TableHead>
                           <TableHead className="w-[120px] text-right px-2">ACTIONS</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -646,50 +559,11 @@ export default function ScraperPage() {
                                       ))}
                                   </div>
                                 ) : (
-                                  <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id, JSON.stringify(row.contact))}>
+                                  <Button variant="outline" size="sm" onClick={() => handlePainPointAnalysis(row.id)}>
                                     <Search className="mr-2 h-4 w-4" />
                                     Analyze
                                   </Button>
                                 )}
-                              </TableCell>
-                              <TableCell className="align-top px-2 py-4">
-                                  <Textarea 
-                                      placeholder="Log feedback, replies..."
-                                      className="text-xs h-24"
-                                      value={row.feedback}
-                                      onChange={(e) => handleFeedbackChange(row.id, e.target.value)}
-                                  />
-                              </TableCell>
-                               <TableCell className="align-top px-2 py-4">
-                                  {row.followUp ? (
-                                    <div className="text-xs space-y-2">
-                                      {row.followUp.status === 'replied' ? (
-                                        <div className="flex items-center gap-2">
-                                          <CheckCheck className="h-4 w-4 text-green-500" />
-                                          <span className="font-semibold">Replied on {format(new Date(row.followUp.replyDate!), 'MMM d, yyyy')}</span>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <div className="font-semibold">
-                                              Follow-up {row.followUp.followUpCount + 1}/3 due: {format(new Date(row.followUp.nextFollowUpDate!), 'MMM d, yyyy')}
-                                          </div>
-                                          <p className="text-muted-foreground">
-                                              Initially contacted on {format(new Date(row.followUp.contactedDate), 'MMM d, yyyy')}
-                                          </p>
-                                          {row.followUp.followUpCount < 2 && new Date(row.followUp.nextFollowUpDate!) <= new Date() && (
-                                              <Button size="sm" variant="outline" onClick={() => setNextFollowUp(row.id)}>
-                                                  Set Next
-                                              </Button>
-                                          )}
-                                        </>
-                                      )}
-                                      <Button variant="ghost" size="sm" onClick={() => resetFollowUp(row.id)} className="text-xs p-1 h-auto">
-                                          <RefreshCcw className="mr-1 h-3 w-3" /> Reset
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground italic">Not contacted yet.</span>
-                                  )}
                               </TableCell>
                               <TableCell className="text-right align-top px-2 py-4">
                                   <div className="flex flex-col gap-1.5 justify-end items-end">
@@ -699,32 +573,6 @@ export default function ScraperPage() {
                                               Craft Reply
                                           </Button>
                                       )}
-                                       <Popover>
-                                          <PopoverTrigger asChild>
-                                               <Button variant="ghost" size="sm" className="w-full justify-start" disabled={!!row.followUp}>
-                                                  <Send className="mr-2 h-4 w-4" />
-                                                  Contacted
-                                              </Button>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-auto p-0">
-                                              <Calendar
-                                                  mode="single"
-                                                  onSelect={(date) => {
-                                                      if (date) {
-                                                        setContacted(row.id, date);
-                                                        const popoverTrigger = document.querySelector(`[data-radix-collection-item][aria-expanded="true"]`);
-                                                        if (popoverTrigger) (popoverTrigger as HTMLElement).click();
-                                                      }
-                                                  }}
-                                                  initialFocus
-                                              />
-                                          </PopoverContent>
-                                      </Popover>
-
-                                      <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setReplied(row.id)} disabled={!row.followUp || row.followUp.status === 'replied'}>
-                                          <CheckCheck className="mr-2 h-4 w-4" />
-                                          Replied
-                                      </Button>
                                       <AlertDialog>
                                           <AlertDialogTrigger asChild>
                                               <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:text-destructive">
@@ -752,7 +600,7 @@ export default function ScraperPage() {
                           })
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                               No research history yet. Add a contact from the scraper above to get started.
                             </TableCell>
                           </TableRow>

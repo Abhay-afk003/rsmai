@@ -6,7 +6,8 @@ import { Loader2, Mail, MessageSquare, Copy, BrainCircuit, X } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { performCraftReply } from '@/app/actions';
 import { Textarea } from './ui/textarea';
-import type { AnalysisHistoryItem, CraftOutreachReplyOutput } from './scraper-page';
+import type { ResearchHistoryItem } from './scraper-page';
+import type { CraftOutreachReplyOutput } from '@/ai/schemas';
 import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
@@ -50,9 +51,21 @@ const ReplyPart = ({ label, content }: { label: string; content?: string; }) => 
   );
 };
 
+export interface FeedbackLoopItem extends ResearchHistoryItem {
+  generatedReply: CraftOutreachReplyOutput;
+  platform: Platform;
+  feedback?: string;
+  followUp?: {
+      status: 'awaiting_reply' | 'replied';
+      contactedDate: string;
+      followUpCount: number;
+      nextFollowUpDate?: string;
+      replyDate?: string;
+  };
+}
 
 export default function ReplyCrafter() {
-  const [activeContact, setActiveContact] = useState<AnalysisHistoryItem | null>(null);
+  const [activeContact, setActiveContact] = useState<ResearchHistoryItem | null>(null);
   const [generatedReply, setGeneratedReply] = useState<CraftOutreachReplyOutput | null>(null);
   const [isCrafting, startCraftingTransition] = useTransition();
   const [platform, setPlatform] = useState<Platform>('email');
@@ -91,9 +104,26 @@ export default function ReplyCrafter() {
 
       if (result.success && result.data) {
         setGeneratedReply(result.data);
+        
+        // Add to feedback loop
+        const feedbackItem: FeedbackLoopItem = {
+          ...activeContact,
+          generatedReply: result.data,
+          platform,
+        };
+        const feedbackHistory = JSON.parse(sessionStorage.getItem("feedbackLoopHistory") || "[]");
+        if (!feedbackHistory.some((item: FeedbackLoopItem) => item.id === feedbackItem.id)) {
+            sessionStorage.setItem("feedbackLoopHistory", JSON.stringify([feedbackItem, ...feedbackHistory]));
+        }
+
         toast({
-          title: 'Reply Crafted',
+          title: 'Reply Crafted & Sent to Feedback Loop',
           description: `Your ${platform} message is ready.`,
+          action: (
+              <Button variant="outline" size="sm" onClick={() => router.push('/feedback-loop')}>
+                  Go to Feedback Loop
+              </Button>
+          ),
         });
       } else {
         toast({
@@ -181,7 +211,8 @@ export default function ReplyCrafter() {
                   </Card>
                 
                 <div>
-                    <h3 className="text-base font-semibold mb-2">Choose Platform</h3>
+                    <h3 className="text-base font-semibold mb-2">Choose Platform & Generate Reply</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Generating a reply will add this contact to your "Feedback Loop" for follow-up tracking.</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Button
                         variant={platform === 'email' ? 'default' : 'outline'}
@@ -189,7 +220,7 @@ export default function ReplyCrafter() {
                         disabled={isCrafting}
                     >
                         <Mail className="mr-2 h-4 w-4" />
-                        Email
+                        Generate Email
                     </Button>
                     <Button
                         variant={platform === 'whatsapp' ? 'default' : 'outline'}
@@ -197,7 +228,7 @@ export default function ReplyCrafter() {
                         disabled={isCrafting}
                     >
                         <MessageSquare className="mr-2 h-4 w-4" />
-                        WhatsApp
+                        Generate WhatsApp
                     </Button>
                     </div>
                 </div>
