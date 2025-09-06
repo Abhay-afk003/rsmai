@@ -323,7 +323,7 @@ export default function ReplyCrafter() {
             <div className="p-4 md:p-8 h-full flex flex-col gap-6">
             {!activeContact ? (
                 <div className="flex-1 flex items-center justify-center text-center border rounded-lg min-h-[300px]">
-                    <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-col items-center gap-4 p-4">
                         <p className="text-muted-foreground">Select a contact from the Prospecting & Research page to start crafting replies.</p>
                         <Button onClick={() => router.push('/')}>Go to Prospecting & Research</Button>
                     </div>
@@ -335,7 +335,7 @@ export default function ReplyCrafter() {
                           <div className="flex justify-between items-start">
                               <div>
                                   <CardTitle className="text-base">{activeContact.contact.name}</CardTitle>
-                                  <CardDescription className="text-xs truncate">
+                                  <CardDescription className="text-xs truncate max-w-[200px] sm:max-w-full">
                                       {activeContact.scrapeQuery} in {activeContact.scrapeLocation || activeContact.scrapeSource}
                                   </CardDescription>
                               </div>
@@ -586,3 +586,5 @@ export default function ReplyCrafter() {
       </div>
   );
 }
+
+    
