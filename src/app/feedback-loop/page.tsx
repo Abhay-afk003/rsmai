@@ -39,13 +39,12 @@ export default function FeedbackLoopPage() {
     useEffect(() => {
         loadHistory();
         
-        // This function will be called whenever the storage is changed from another tab/window
-        const handleStorageChange = () => {
-            loadHistory();
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key === "feedbackLoopHistory") {
+                 loadHistory();
+            }
         };
-
-        // This function will be called when the window gets focus, ensuring updates
-        // from the same tab (after page navigation) are caught.
+        
         const handleFocus = () => {
             loadHistory();
         };
