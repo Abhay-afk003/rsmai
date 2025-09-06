@@ -28,9 +28,7 @@ export default function RootLayout({
             <Sidebar />
             <div className="flex flex-col">
               <MobileHeader />
-              <main className="flex flex-1 flex-col">
-                {children}
-              </main>
+              {children}
             </div>
           </div>
           <Toaster />

@@ -306,7 +306,7 @@ export default function ScraperPage() {
   return (
     <TooltipProvider>
       <div className="flex flex-col h-full w-full">
-        <div className="flex-1 space-y-4 md:space-y-6 p-4 md:p-6">
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
           <Card>
             <CardHeader>
               <CardTitle>Contact Scraping</CardTitle>
@@ -610,10 +610,8 @@ export default function ScraperPage() {
                   </div>
                 </CardContent>
               </Card>
-        </div>
+        </main>
       </div>
     </TooltipProvider>
   );
 }
-
-    

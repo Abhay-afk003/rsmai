@@ -315,9 +315,9 @@ export default function ReplyCrafter() {
 
   return (
       <div className="flex flex-col h-full">
-        <header className="hidden md:flex px-4 lg:px-6 h-14 items-center border-b shrink-0">
+        <header className="flex h-14 items-center border-b bg-background px-4 lg:h-[60px] lg:px-6">
           <BrainCircuit className="h-6 w-6 text-primary" />
-          <h1 className="ml-2 text-lg font-semibold">Reply Crafter & Follow-ups</h1>
+          <h1 className="ml-2 text-lg font-semibold">Reply Crafter & Follow-ups (Baki)</h1>
         </header>
         <div className="flex-1 overflow-y-auto">
             <div className="p-4 md:p-8 h-full flex flex-col gap-6">
@@ -586,5 +586,3 @@ export default function ReplyCrafter() {
       </div>
   );
 }
-
-    
