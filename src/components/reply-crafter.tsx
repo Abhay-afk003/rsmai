@@ -114,16 +114,32 @@ export default function ReplyCrafter() {
             };
             
             const storedHistory = sessionStorage.getItem("feedbackLoopHistory");
-            const feedbackHistory: FeedbackLoopItem[] = storedHistory ? JSON.parse(storedHistory) : [];
-            
-            const itemExists = feedbackHistory.some((item) => item.id === feedbackItem.id);
-            
-            if (!itemExists) {
-                const newHistory = [feedbackItem, ...feedbackHistory];
-                sessionStorage.setItem("feedbackLoopHistory", JSON.stringify(newHistory));
-                 // Dispatch a storage event to notify other tabs/windows
-                window.dispatchEvent(new Event("storage"));
+            let feedbackHistory: FeedbackLoopItem[] = [];
+
+            if (storedHistory) {
+                try {
+                    feedbackHistory = JSON.parse(storedHistory);
+                } catch (e) {
+                    console.error("Failed to parse feedback loop history, resetting.", e);
+                    feedbackHistory = [];
+                }
             }
+            
+            const itemIndex = feedbackHistory.findIndex((item) => item.id === feedbackItem.id);
+            
+            if (itemIndex > -1) {
+              // Item exists, maybe update it? For now, we'll just leave it.
+              // Or replace it:
+              // feedbackHistory[itemIndex] = feedbackItem;
+            } else {
+                // Add new item to the beginning
+                feedbackHistory.unshift(feedbackItem);
+            }
+            
+            sessionStorage.setItem("feedbackLoopHistory", JSON.stringify(feedbackHistory));
+            // Dispatch a storage event to notify other tabs/windows
+            window.dispatchEvent(new Event("storage"));
+
         } catch (e) {
             console.error("Could not process feedback loop history", e)
         }

@@ -31,20 +31,23 @@ export default function FeedbackLoopPage() {
             }
         } catch (error) {
             console.error("Failed to parse history from sessionStorage", error);
-            sessionStorage.removeItem("feedbackLoopHistory");
+            sessionStorage.removeItem("feedbackLoopHistory"); // Clear corrupted data
             setHistory([]);
         }
     }, []);
 
     useEffect(() => {
+        // Initial load
         loadHistory();
         
+        // Listen for changes from other tabs/windows
         const handleStorageChange = (event: StorageEvent) => {
             if (event.key === "feedbackLoopHistory") {
                  loadHistory();
             }
         };
         
+        // Listen for when the user focuses this tab
         const handleFocus = () => {
             loadHistory();
         };
@@ -52,13 +55,17 @@ export default function FeedbackLoopPage() {
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('focus', handleFocus);
 
+        // Cleanup listeners
         return () => {
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('focus', handleFocus);
         };
     }, [loadHistory]);
 
+
     useEffect(() => {
+        // This effect runs only when the history state changes internally on this page
+        // to save it back to sessionStorage.
         try {
             sessionStorage.setItem("feedbackLoopHistory", JSON.stringify(history));
         } catch (error) {
@@ -153,7 +160,7 @@ export default function FeedbackLoopPage() {
     };
 
     const getFollowUpStatus = (item: FeedbackLoopItem): FollowUpStatus => {
-        if (!item.followUp) return 'upcoming';
+        if (!item.followUp) return 'upcoming'; // Should be 'not contacted', but for sorting logic this works
         if (item.followUp.status === 'replied') return 'complete';
         if (!item.followUp.nextFollowUpDate) return 'complete';
 
