@@ -39,18 +39,23 @@ export default function FeedbackLoopPage() {
     useEffect(() => {
         loadHistory();
         
+        // This function will be called whenever the storage is changed from another tab/window
         const handleStorageChange = () => {
             loadHistory();
         };
 
+        // This function will be called when the window gets focus, ensuring updates
+        // from the same tab (after page navigation) are caught.
+        const handleFocus = () => {
+            loadHistory();
+        };
+
         window.addEventListener('storage', handleStorageChange);
-        
-        // Also listen for focus to catch changes from other tabs without a full storage event
-        window.addEventListener('focus', loadHistory);
+        window.addEventListener('focus', handleFocus);
 
         return () => {
             window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('focus', loadHistory);
+            window.removeEventListener('focus', handleFocus);
         };
     }, [loadHistory]);
 

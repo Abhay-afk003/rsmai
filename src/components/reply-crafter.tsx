@@ -121,6 +121,8 @@ export default function ReplyCrafter() {
             if (!itemExists) {
                 const newHistory = [feedbackItem, ...feedbackHistory];
                 sessionStorage.setItem("feedbackLoopHistory", JSON.stringify(newHistory));
+                 // Dispatch a storage event to notify other tabs/windows
+                window.dispatchEvent(new Event("storage"));
             }
         } catch (e) {
             console.error("Could not process feedback loop history", e)
