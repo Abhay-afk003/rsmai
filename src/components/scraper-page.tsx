@@ -313,7 +313,7 @@ export default function ScraperPage() {
               <CardDescription>Scrape contact details based on your Ideal Customer Profile (ICP).</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
-              <div className="flex flex-col lg:flex-row gap-4 items-end">
+              <div className="flex flex-col lg:flex-row gap-4">
                   <div className="grid gap-2 w-full lg:w-[200px]">
                       <label htmlFor="scrape-source" className="text-sm font-medium">Data Source</label>
                       <Select value={scrapeSource} onValueChange={(v) => setScrapeSource(v as ScrapeSource)} disabled={isPending}>
@@ -355,7 +355,7 @@ export default function ScraperPage() {
                           disabled={isPending}
                       />
                   </div>
-                   <Button onClick={handleScrape} disabled={isScraping} className="w-full lg:w-auto">
+                   <Button onClick={handleScrape} disabled={isScraping} className="w-full lg:w-auto self-end">
                       {isScraping ? (
                       <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -38,10 +38,10 @@ export default function MobileHeader() {
                     </nav>
                 </SheetContent>
             </Sheet>
-            <div className="flex items-center flex-1 justify-center">
-                <Link href="/" className="flex items-center gap-2 font-semibold">
+            <div className="flex-1 text-center">
+                 <Link href="/" className="flex items-center gap-2 font-semibold text-lg justify-center">
                     <BrainCircuit className="h-6 w-6 text-primary" />
-                    <h1 className="text-lg">RSM Insights</h1>
+                    <h1>RSM Insights</h1>
                 </Link>
             </div>
         </header>
