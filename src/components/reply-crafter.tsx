@@ -116,7 +116,9 @@ export default function ReplyCrafter() {
             const storedHistory = sessionStorage.getItem("feedbackLoopHistory");
             const feedbackHistory: FeedbackLoopItem[] = storedHistory ? JSON.parse(storedHistory) : [];
             
-            if (!feedbackHistory.some((item) => item.id === feedbackItem.id)) {
+            const itemExists = feedbackHistory.some((item) => item.id === feedbackItem.id);
+            
+            if (!itemExists) {
                 const newHistory = [feedbackItem, ...feedbackHistory];
                 sessionStorage.setItem("feedbackLoopHistory", JSON.stringify(newHistory));
             }

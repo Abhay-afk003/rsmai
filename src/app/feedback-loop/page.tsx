@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { User, Link as LinkIcon, Phone, Mail, Users, Trash2, CheckCheck, RefreshCcw, Send, MessageCircle } from "lucide-react";
+import { User, Link as LinkIcon, Phone, Mail, Users, Trash2, CheckCheck, RefreshCcw, Send } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,17 +20,39 @@ export default function FeedbackLoopPage() {
     const [history, setHistory] = useState<FeedbackLoopItem[]>([]);
     const { toast } = useToast();
 
-    useEffect(() => {
+    const loadHistory = useCallback(() => {
         try {
             const storedHistory = sessionStorage.getItem("feedbackLoopHistory");
             if (storedHistory) {
-                setHistory(JSON.parse(storedHistory));
+                const parsedHistory = JSON.parse(storedHistory);
+                setHistory(parsedHistory);
+            } else {
+                setHistory([]);
             }
         } catch (error) {
             console.error("Failed to parse history from sessionStorage", error);
             sessionStorage.removeItem("feedbackLoopHistory");
+            setHistory([]);
         }
     }, []);
+
+    useEffect(() => {
+        loadHistory();
+        
+        const handleStorageChange = () => {
+            loadHistory();
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        
+        // Also listen for focus to catch changes from other tabs without a full storage event
+        window.addEventListener('focus', loadHistory);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('focus', loadHistory);
+        };
+    }, [loadHistory]);
 
     useEffect(() => {
         try {
@@ -72,7 +94,7 @@ export default function FeedbackLoopPage() {
                     followUp: {
                         ...item.followUp,
                         followUpCount: newFollowUpCount,
-                        nextFollowUpDate: format(add(new Date(item.followUp.contactedDate), { days: daysToAdd }), 'yyyy-MM-dd'),
+                        nextFollowUpDate: format(add(new Date(), { days: daysToAdd }), 'yyyy-MM-dd'),
                     }
                 };
             }
@@ -146,7 +168,13 @@ export default function FeedbackLoopPage() {
         return [...history].sort((a, b) => {
             const statusA = getFollowUpStatus(a);
             const statusB = getFollowUpStatus(b);
-            return statusOrder[statusA] - statusOrder[statusB];
+            if (statusA !== statusB) {
+                return statusOrder[statusA] - statusOrder[statusB];
+            }
+            if (a.followUp?.nextFollowUpDate && b.followUp?.nextFollowUpDate) {
+                return new Date(a.followUp.nextFollowUpDate).getTime() - new Date(b.followUp.nextFollowUpDate).getTime();
+            }
+            return 0;
         });
     }, [history]);
 
