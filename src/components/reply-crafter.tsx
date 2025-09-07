@@ -229,7 +229,7 @@ export default function ReplyCrafter() {
                     followUp: {
                         ...item.followUp,
                         followUpCount: newFollowUpCount,
-                        nextFollowUpDate: format(add(new Date(), { days: daysToAdd }), 'yyyy-MM-dd'),
+                        nextFollowUpDate: format(add(new Date(item.followUp.contactedDate), { days: daysToAdd }), 'yyyy-MM-dd'),
                     }
                 };
             }
