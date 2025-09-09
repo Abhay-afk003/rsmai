@@ -16,20 +16,26 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     } catch (error) {
       console.error("Session storage is not available.", error);
     }
+    
+    setIsAuthenticated(authStatus);
+    setIsLoading(false);
 
-    if (authStatus) {
-      setIsAuthenticated(true);
-      if (pathname === '/login') {
-        router.push('/');
-      }
-    } else {
-      if (pathname !== '/login') {
-        router.push('/login');
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
+        if (pathname === '/login') {
+          router.push('/');
+        }
+      } else {
+        if (pathname !== '/login') {
+          router.push('/login');
+        }
       }
     }
-    setIsLoading(false);
-  }, [pathname, router]);
-  
+  }, [isAuthenticated, isLoading, pathname, router]);
+
   if (isLoading) {
     return (
         <div className="flex items-center justify-center min-h-screen">
@@ -38,25 +44,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     );
   }
 
-  // If we are on the login page and not authenticated, show the login page
-  if (!isAuthenticated && pathname === '/login') {
-    return <>{children}</>;
-  }
-
-  // If we are not on the login page and not authenticated, we are being redirected, so show nothing.
   if (!isAuthenticated && pathname !== '/login') {
-    return null;
-  }
-  
-  // If we are authenticated and not on the login page, show the content.
-  if (isAuthenticated && pathname !== '/login') {
-    return <>{children}</>;
+    return null; // Don't render anything while redirecting to login
   }
 
-  // If we are authenticated and on the login page, we are being redirected, so show nothing.
   if (isAuthenticated && pathname === '/login') {
-    return null;
+    return null; // Don't render login page if authenticated
   }
 
-  return null;
+  return <>{children}</>;
 }
