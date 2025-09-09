@@ -4,37 +4,35 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    let authStatus = false;
+    let isAuthenticated = false;
     try {
-      authStatus = sessionStorage.getItem('rsm-authenticated') === 'true';
+      isAuthenticated = sessionStorage.getItem('rsm-authenticated') === 'true';
     } catch (error) {
+      // If sessionStorage is not available, we can't authenticate.
       console.error("Session storage is not available.", error);
     }
-    
-    setIsAuthenticated(authStatus);
-    setIsLoading(false);
 
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated) {
-        if (pathname === '/login') {
-          router.push('/');
-        }
+    if (isAuthenticated) {
+      // User is authenticated
+      if (pathname === '/login') {
+        router.push('/');
       } else {
-        if (pathname !== '/login') {
-          router.push('/login');
-        }
+        setIsLoading(false);
+      }
+    } else {
+      // User is not authenticated
+      if (pathname !== '/login') {
+        router.push('/login');
+      } else {
+        setIsLoading(false);
       }
     }
-  }, [isAuthenticated, isLoading, pathname, router]);
+  }, [pathname, router]);
 
   if (isLoading) {
     return (
@@ -42,14 +40,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             <div className="text-muted-foreground">Loading...</div>
         </div>
     );
-  }
-
-  if (!isAuthenticated && pathname !== '/login') {
-    return null; // Don't render anything while redirecting to login
-  }
-
-  if (isAuthenticated && pathname === '/login') {
-    return null; // Don't render login page if authenticated
   }
 
   return <>{children}</>;
