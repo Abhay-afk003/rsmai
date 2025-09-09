@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { BrainCircuit, KeyRound } from 'lucide-react';
 
 // This should be in an environment variable in a real application
-const SUPER_SECRET_PASSKEY = "baki-hanma"; 
+const SUPER_SECRET_PASSKEY = "M8!pZ7#qLr@4Vx1$Tn&9"; 
 
 export default function LoginPage() {
   const [passkey, setPasskey] = useState('');
